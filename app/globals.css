@@ -2354,6 +2354,16 @@ h3 {
   left: -9999px;
 }
 
+.form-error {
+  margin: 0;
+  padding: 0.8rem 1rem;
+  border: 1px solid #f7a8c9;
+  border-radius: 14px;
+  background: #fff1f6;
+  color: #9b174f;
+  font-weight: 700;
+}
+
 .legal-page {
   max-width: 860px;
   padding: 40px;

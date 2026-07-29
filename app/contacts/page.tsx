@@ -6,6 +6,7 @@ import {
   UsersRound,
 } from "lucide-react";
 import { Breadcrumbs } from "@/components/Breadcrumbs";
+import { ContactForm } from "@/components/ContactForm";
 import {
   FACEBOOK_URL,
   TELEGRAM_URL,
@@ -65,62 +66,7 @@ export default function ContactsPage() {
                 <p>Заповніть усі обов’язкові поля.</p>
               </div>
             </div>
-            <form
-              name="contact"
-              method="POST"
-              action="/success/"
-              data-netlify="true"
-              netlify-honeypot="bot-field"
-            >
-              <input type="hidden" name="form-name" value="contact" />
-              <p className="honeypot">
-                <label>
-                  Не заповнюйте це поле:
-                  <input name="bot-field" tabIndex={-1} autoComplete="off" />
-                </label>
-              </p>
-              <div className="form-grid">
-                <label>
-                  <span>Ім’я *</span>
-                  <input
-                    type="text"
-                    name="name"
-                    required
-                    minLength={2}
-                    maxLength={80}
-                    autoComplete="name"
-                  />
-                </label>
-                <label>
-                  <span>Email *</span>
-                  <input
-                    type="email"
-                    name="email"
-                    required
-                    maxLength={120}
-                    autoComplete="email"
-                  />
-                </label>
-              </div>
-              <label>
-                <span>Тема *</span>
-                <input type="text" name="subject" required minLength={3} maxLength={140} />
-              </label>
-              <label>
-                <span>Повідомлення *</span>
-                <textarea name="message" required minLength={10} maxLength={3000} rows={7} />
-              </label>
-              <label className="privacy-check">
-                <input type="checkbox" name="privacy-consent" value="yes" required />
-                <span>
-                  Погоджуюся з обробкою даних для відповіді на моє
-                  повідомлення згідно з політикою конфіденційності.
-                </span>
-              </label>
-              <button className="button button-primary" type="submit">
-                <Send size={19} aria-hidden="true" /> Надіслати повідомлення
-              </button>
-            </form>
+            <ContactForm />
           </section>
         </div>
       </div>

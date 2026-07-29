@@ -14,6 +14,7 @@ const required = [
   "about/index.html",
   "how-to-buy/index.html",
   "contacts/index.html",
+  "__forms.html",
   "success/index.html",
   "404.html",
   "robots.txt",

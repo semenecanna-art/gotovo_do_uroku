@@ -69,6 +69,22 @@ check(
   (await page.locator(".home-materials .material-card").count()) >= 6,
   "На головній є щонайменше 6 реальних прев’ю",
 );
+const homeImageLocators = page.locator(".home-materials img");
+for (let index = 0; index < (await homeImageLocators.count()); index += 1) {
+  const image = homeImageLocators.nth(index);
+  await image.scrollIntoViewIfNeeded();
+  await image.evaluate(
+    (element) =>
+      new Promise((resolve) => {
+        if (element.complete) {
+          resolve();
+          return;
+        }
+        element.addEventListener("load", resolve, { once: true });
+        element.addEventListener("error", resolve, { once: true });
+      }),
+  );
+}
 const homeImages = await page
   .locator(".home-materials img")
   .evaluateAll((images) =>
@@ -171,6 +187,16 @@ check(
   await form.locator('button[type="submit"]').isEnabled(),
   "Поля форми проходять валідацію",
 );
+if (process.env.TEST_SUBMIT_FORM === "1") {
+  await Promise.all([
+    page.waitForURL(/\/success\/?$/, { timeout: 30_000 }),
+    form.locator('button[type="submit"]').click(),
+  ]);
+  check(
+    await page.locator("h1").isVisible(),
+    "Netlify Forms приймає повідомлення й відкриває сторінку успіху",
+  );
+}
 
 testingNotFound = true;
 await page.goto(`${baseUrl}/storinka-yakoyi-nemaye/`, {
