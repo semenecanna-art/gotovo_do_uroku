@@ -1,4 +1,4 @@
-import { ArrowUpRight, BookOpen, Gift, ShoppingBag } from "lucide-react";
+import { ArrowUpRight, BookOpen, Gift, Send, ShoppingBag } from "lucide-react";
 import { SafeImage } from "@/components/SafeImage";
 import type { MaterialSummary } from "@/lib/types";
 
@@ -61,15 +61,28 @@ export function MaterialCard({ material }: { material: MaterialSummary }) {
           <a className="button button-small button-secondary" href={`/materials/${material.slug}/`}>
             Переглянути
           </a>
-          <a
-            className="text-action"
-            href={material.vseosvitaUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            {material.isFree ? "Відкрити" : "Купити"}
-            <ArrowUpRight size={17} aria-hidden="true" />
-          </a>
+          <div className="material-external-actions">
+            <a
+              className="text-action"
+              href={material.vseosvitaUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={`${material.isFree ? "Відкрити" : "Купити"} «${material.title}» на Всеосвіті`}
+            >
+              Всеосвіта
+              <ArrowUpRight size={17} aria-hidden="true" />
+            </a>
+            <a
+              className="text-action card-telegram-action"
+              href={material.telegramUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Перейти в Telegram-канал «Готово до уроку»"
+            >
+              <Send size={16} aria-hidden="true" />
+              Telegram
+            </a>
+          </div>
         </div>
       </div>
     </article>

@@ -51,6 +51,7 @@ export type MaterialSummary = Pick<
   | "isNew"
   | "isPopular"
   | "vseosvitaUrl"
+  | "telegramUrl"
   | "createdAt"
   | "price"
   | "views"

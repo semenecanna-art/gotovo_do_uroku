@@ -9,6 +9,7 @@ import {
   Gift,
   GraduationCap,
   Layers3,
+  Send,
   ShoppingBag,
   Tag,
 } from "lucide-react";
@@ -98,7 +99,7 @@ export default async function MaterialPage({
     learningResourceType: material.materialType || undefined,
     isAccessibleForFree: material.isFree,
     datePublished: material.createdAt || undefined,
-    sameAs: material.vseosvitaUrl,
+    sameAs: [material.vseosvitaUrl, material.telegramUrl],
   };
 
   return (
@@ -189,6 +190,15 @@ export default async function MaterialPage({
                 {material.isFree ? "Відкрити на Всеосвіті" : "Купити на Всеосвіті"}
                 <ArrowUpRight size={20} aria-hidden="true" />
               </a>
+              <a
+                className="button button-telegram"
+                href={material.telegramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Send size={19} aria-hidden="true" />
+                Перейти в Telegram
+              </a>
               <ShareButton title={material.title} />
             </div>
             <p className="external-note">
@@ -220,15 +230,26 @@ export default async function MaterialPage({
               Повний склад комплекту, умови доступу та спосіб використання
               вказані авторкою на сторінці матеріалу.
             </p>
-            <a
-              className="text-action"
-              href={material.vseosvitaUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              Переглянути оригінальну сторінку
-              <ArrowUpRight size={17} aria-hidden="true" />
-            </a>
+            <div className="description-aside-links">
+              <a
+                className="text-action"
+                href={material.vseosvitaUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Переглянути на Всеосвіті
+                <ArrowUpRight size={17} aria-hidden="true" />
+              </a>
+              <a
+                className="text-action card-telegram-action"
+                href={material.telegramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                <Send size={17} aria-hidden="true" />
+                Відкрити Telegram-канал
+              </a>
+            </div>
           </aside>
         </section>
 

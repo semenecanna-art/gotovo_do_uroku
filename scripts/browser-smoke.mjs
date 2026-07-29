@@ -69,6 +69,23 @@ check(
   (await page.locator(".home-materials .material-card").count()) >= 6,
   "На головній є щонайменше 6 реальних прев’ю",
 );
+const homeTelegramLinks = page.locator(
+  '.home-materials .material-card a[href="https://t.me/gotovo_do_uroku"]',
+);
+check(
+  (await homeTelegramLinks.count()) >= 6,
+  "Кожна картка популярних матеріалів має посилання на Telegram",
+);
+check(
+  (await homeTelegramLinks.evaluateAll((links) =>
+    links.every(
+      (link) =>
+        link.getAttribute("target") === "_blank" &&
+        link.getAttribute("rel")?.includes("noopener"),
+    ),
+  )),
+  "Telegram-посилання на картках безпечно відкриваються в новій вкладці",
+);
 const homeImageLocators = page.locator(".home-materials img");
 for (let index = 0; index < (await homeImageLocators.count()); index += 1) {
   const image = homeImageLocators.nth(index);
@@ -149,6 +166,23 @@ check(
   await page.locator(".gallery-main-image img").isVisible(),
   "Головне зображення галереї видно",
 );
+const detailTelegramLink = page.locator(
+  '.detail-actions a[href="https://t.me/gotovo_do_uroku"]',
+);
+check(
+  (await detailTelegramLink.count()) === 1 &&
+    (await detailTelegramLink.isVisible()),
+  "На сторінці матеріалу є помітна кнопка Telegram",
+);
+check(
+  (await detailTelegramLink.getAttribute("target")) === "_blank" &&
+    (await detailTelegramLink.getAttribute("rel"))?.includes("noopener"),
+  "Кнопка Telegram на сторінці матеріалу має правильну й безпечну адресу",
+);
+await page.screenshot({
+  path: path.join(outputDir, "material-detail-desktop.png"),
+  fullPage: true,
+});
 if ((await page.locator(".gallery-thumbnails button").count()) > 1) {
   await page.locator(".gallery-thumbnails button").nth(1).click();
   await page.locator(".gallery-image-button").click();
@@ -215,6 +249,12 @@ check(
   await page.locator(".material-detail h1").isVisible(),
   "Пряме повторне відкриття матеріалу працює",
 );
+check(
+  await page
+    .locator('.detail-actions a[href="https://t.me/gotovo_do_uroku"]')
+    .isVisible(),
+  "Telegram-кнопка зберігається після прямого відкриття сторінки матеріалу",
+);
 
 const mobile = await browser.newContext({
   viewport: { width: 390, height: 844 },
@@ -263,6 +303,33 @@ check(
 await mobilePage.screenshot({
   path: path.join(outputDir, "catalog-mobile.png"),
   fullPage: false,
+});
+const mobileMaterialHref = await mobilePage
+  .locator(".material-card h3 a")
+  .first()
+  .getAttribute("href");
+check(Boolean(mobileMaterialHref), "На мобільному доступний перехід до матеріалу");
+await mobilePage.goto(new URL(mobileMaterialHref, baseUrl).href, {
+  waitUntil: "domcontentloaded",
+});
+check(
+  await mobilePage
+    .locator('.detail-actions a[href="https://t.me/gotovo_do_uroku"]')
+    .isVisible(),
+  "Telegram-кнопка видима на мобільній сторінці матеріалу",
+);
+const materialMobileOverflow = await mobilePage.evaluate(
+  () =>
+    document.documentElement.scrollWidth -
+    document.documentElement.clientWidth,
+);
+check(
+  materialMobileOverflow <= 1,
+  "На мобільній сторінці матеріалу немає горизонтального прокручування",
+);
+await mobilePage.screenshot({
+  path: path.join(outputDir, "material-detail-mobile.png"),
+  fullPage: true,
 });
 
 await desktop.close();

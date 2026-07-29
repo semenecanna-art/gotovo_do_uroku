@@ -948,8 +948,24 @@ h3 {
   gap: 8px;
 }
 
+.material-external-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 6px 11px;
+}
+
 .material-actions .text-action {
   font-size: 0.84rem;
+}
+
+.card-telegram-action {
+  color: #087ad6;
+}
+
+.card-telegram-action:hover {
+  color: #075fa8;
 }
 
 .center-action {
@@ -1939,6 +1955,11 @@ h3 {
   margin-top: 16px;
   color: #7b829c;
   font-size: 0.79rem;
+}
+
+.description-aside-links {
+  display: grid;
+  gap: 12px;
 }
 
 .material-description {
@@ -3065,6 +3086,11 @@ h3 {
   .material-actions .text-action {
     justify-content: center;
     padding: 8px;
+  }
+
+  .material-external-actions {
+    justify-content: space-evenly;
+    border-top: 1px solid #f1ddea;
   }
 
   .status-actions {
