@@ -167,9 +167,11 @@ const materialUrl = page.url();
 await page.goto(`${baseUrl}/contacts/`, { waitUntil: "domcontentloaded" });
 const form = page.locator('form[name="contact"]');
 check(await form.isVisible(), "Форма зворотного зв’язку відображається");
+const netlifyMarker = await form.getAttribute("data-netlify");
 check(
-  (await form.getAttribute("data-netlify")) === "true",
-  "Форма позначена для Netlify Forms",
+  netlifyMarker === "true" ||
+    (baseUrl.startsWith("https://") && netlifyMarker === null),
+  "Форма налаштована або вже оброблена Netlify Forms",
 );
 check(
   (await form.locator('input[name="form-name"]').getAttribute("value")) ===
