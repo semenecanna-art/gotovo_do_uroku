@@ -1,0 +1,257 @@
+import { chromium } from "playwright-core";
+import fs from "node:fs/promises";
+import path from "node:path";
+import process from "node:process";
+
+const baseUrl = process.env.TEST_BASE_URL ?? "http://127.0.0.1:4175";
+const chromePaths = [
+  "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+  "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
+  "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+  "C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe",
+];
+const executablePath = await Promise.any(
+  chromePaths.map(async (candidate) => {
+    await fs.access(candidate);
+    return candidate;
+  }),
+).catch(() => "");
+
+if (!executablePath) {
+  throw new Error("Chrome або Edge не знайдено.");
+}
+
+const outputDir = path.join(process.cwd(), "test-results");
+await fs.mkdir(outputDir, { recursive: true });
+const browser = await chromium.launch({
+  executablePath,
+  headless: true,
+  args: ["--disable-features=Translate"],
+});
+const desktop = await browser.newContext({
+  viewport: { width: 1440, height: 1000 },
+  deviceScaleFactor: 1,
+});
+const page = await desktop.newPage();
+const errors = [];
+const checks = [];
+let testingNotFound = false;
+
+page.on("pageerror", (error) => errors.push(`pageerror: ${error.message}`));
+page.on("console", (message) => {
+  if (message.type() === "error" && !testingNotFound) {
+    errors.push(`console: ${message.text()}`);
+  }
+});
+page.on("response", (response) => {
+  if (
+    response.status() >= 400 &&
+    !response.url().includes("favicon") &&
+    !response.url().includes("/storinka-yakoyi-nemaye/")
+  ) {
+    errors.push(`HTTP ${response.status()}: ${response.url()}`);
+  }
+});
+
+const check = (condition, message) => {
+  if (!condition) throw new Error(message);
+  checks.push(message);
+};
+
+await page.goto(baseUrl, { waitUntil: "domcontentloaded", timeout: 60_000 });
+await page.locator("h1").waitFor({ state: "visible", timeout: 30_000 });
+check(await page.locator("h1").isVisible(), "Головний заголовок видно");
+check(
+  (await page.locator('img[alt*="Готово до уроку"]').count()) >= 2,
+  "Логотип і бренд-банер завантажені",
+);
+check(
+  (await page.locator(".home-materials .material-card").count()) >= 6,
+  "На головній є щонайменше 6 реальних прев’ю",
+);
+const homeImages = await page
+  .locator(".home-materials img")
+  .evaluateAll((images) =>
+    images.map((image) => ({
+      complete: image.complete,
+      width: image.naturalWidth,
+      src: image.currentSrc || image.src,
+    })),
+  );
+check(
+  homeImages.every((image) => image.complete && image.width > 0),
+  "Зображення популярних матеріалів не биті",
+);
+await page.screenshot({
+  path: path.join(outputDir, "home-desktop.png"),
+  fullPage: true,
+});
+
+await Promise.all([
+  page.waitForURL(/\/catalog\/?$/, { timeout: 30_000 }),
+  page.locator('header a[href="/catalog/"]').first().click(),
+]);
+check(page.url().includes("/catalog"), "Перехід до каталогу працює");
+await page
+  .getByPlaceholder("Введіть тему, предмет або назву матеріалу")
+  .fill("Росток");
+await page.waitForTimeout(250);
+const searchedCount = await page.locator(".material-card").count();
+check(searchedCount > 0, "Пошук за словом «Росток» повертає результати");
+
+await page.getByLabel("Категорія").selectOption({ label: "Математика" });
+await page.waitForTimeout(150);
+check(
+  (await page.locator(".material-card").count()) > 0,
+  "Фільтр категорії працює",
+);
+await page.getByLabel("Доступ").selectOption("free");
+await page.waitForTimeout(150);
+const statuses = await page.locator(".material-status").allTextContents();
+check(
+  statuses.length > 0 &&
+    statuses.every((text) => text.includes("Безкоштовно")),
+  "Фільтр безкоштовних матеріалів працює",
+);
+await page.getByRole("button", { name: "Очистити фільтри" }).click();
+await page.waitForTimeout(150);
+await page.getByLabel("Сортування").selectOption("popular");
+await page.waitForTimeout(150);
+check(
+  (await page.locator(".material-card").count()) > 0,
+  "Сортування за популярністю працює",
+);
+await Promise.all([
+  page.waitForURL(/\/materials\/.+/, { timeout: 30_000 }),
+  page.locator(".material-card h3 a").first().click(),
+]);
+check(
+  await page.locator(".material-detail h1").isVisible(),
+  "Пряма сторінка матеріалу відкривається",
+);
+check(
+  await page.locator(".gallery-main-image img").isVisible(),
+  "Головне зображення галереї видно",
+);
+if ((await page.locator(".gallery-thumbnails button").count()) > 1) {
+  await page.locator(".gallery-thumbnails button").nth(1).click();
+  await page.locator(".gallery-image-button").click();
+  check(
+    await page.locator(".gallery-modal").isVisible(),
+    "Модальне збільшення працює",
+  );
+  await page.keyboard.press("Escape");
+  check(
+    !(await page.locator(".gallery-modal").isVisible()),
+    "Модальне вікно закривається Escape",
+  );
+}
+const materialUrl = page.url();
+
+await page.goto(`${baseUrl}/contacts/`, { waitUntil: "domcontentloaded" });
+const form = page.locator('form[name="contact"]');
+check(await form.isVisible(), "Форма зворотного зв’язку відображається");
+check(
+  (await form.getAttribute("data-netlify")) === "true",
+  "Форма позначена для Netlify Forms",
+);
+check(
+  (await form.locator('input[name="form-name"]').getAttribute("value")) ===
+    "contact",
+  "Приховане ім’я форми налаштоване",
+);
+await form.locator('input[name="name"]').fill("Тестова перевірка");
+await form.locator('input[name="email"]').fill("qa@example.com");
+await form.locator('input[name="subject"]').fill("Перевірка форми");
+await form.locator('textarea[name="message"]').fill(
+  "Це локальна перевірка валідації без надсилання даних.",
+);
+await form.locator('input[name="privacy-consent"]').check();
+check(
+  await form.locator('button[type="submit"]').isEnabled(),
+  "Поля форми проходять валідацію",
+);
+
+testingNotFound = true;
+await page.goto(`${baseUrl}/storinka-yakoyi-nemaye/`, {
+  waitUntil: "domcontentloaded",
+});
+check(
+  (await page.locator("body").innerText()).includes("404"),
+  "Сторінка 404 відкривається",
+);
+testingNotFound = false;
+
+await page.goto(materialUrl, { waitUntil: "domcontentloaded" });
+check(
+  await page.locator(".material-detail h1").isVisible(),
+  "Пряме повторне відкриття матеріалу працює",
+);
+
+const mobile = await browser.newContext({
+  viewport: { width: 390, height: 844 },
+  deviceScaleFactor: 2,
+  isMobile: true,
+  hasTouch: true,
+});
+const mobilePage = await mobile.newPage();
+mobilePage.on("pageerror", (error) =>
+  errors.push(`mobile pageerror: ${error.message}`),
+);
+mobilePage.on("console", (message) => {
+  if (message.type() === "error") {
+    errors.push(`mobile console: ${message.text()}`);
+  }
+});
+await mobilePage.goto(baseUrl, { waitUntil: "domcontentloaded" });
+const overflow = await mobilePage.evaluate(
+  () =>
+    document.documentElement.scrollWidth -
+    document.documentElement.clientWidth,
+);
+check(overflow <= 1, "На мобільному немає горизонтального прокручування");
+await mobilePage.screenshot({
+  path: path.join(outputDir, "home-mobile.png"),
+  fullPage: true,
+});
+await mobilePage.getByRole("button", { name: "Відкрити меню" }).click();
+check(
+  await mobilePage.locator(".mobile-menu").isVisible(),
+  "Мобільне меню відкривається",
+);
+await mobilePage.screenshot({
+  path: path.join(outputDir, "menu-mobile.png"),
+  fullPage: false,
+});
+await Promise.all([
+  mobilePage.waitForURL(/\/catalog\/?$/, { timeout: 30_000 }),
+  mobilePage.locator('.mobile-menu a[href="/catalog/"]').click(),
+]);
+await mobilePage.getByRole("button", { name: /Фільтри/ }).click();
+check(
+  await mobilePage.locator(".filter-panel.open").isVisible(),
+  "Мобільна панель фільтрів відкривається",
+);
+await mobilePage.screenshot({
+  path: path.join(outputDir, "catalog-mobile.png"),
+  fullPage: false,
+});
+
+await desktop.close();
+await mobile.close();
+await browser.close();
+
+const uniqueErrors = Array.from(new Set(errors));
+const report = {
+  baseUrl,
+  executablePath,
+  checks,
+  errors: uniqueErrors,
+  generatedAt: new Date().toISOString(),
+};
+await fs.writeFile(
+  path.join(outputDir, "browser-report.json"),
+  `${JSON.stringify(report, null, 2)}\n`,
+);
+console.log(JSON.stringify(report, null, 2));
+if (uniqueErrors.length) process.exitCode = 1;
