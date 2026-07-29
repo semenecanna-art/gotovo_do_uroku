@@ -6,6 +6,9 @@ const root = process.cwd();
 const materials = JSON.parse(
   await fs.readFile(path.join(root, "data", "materials.json"), "utf8"),
 );
+const telegramLinks = JSON.parse(
+  await fs.readFile(path.join(root, "data", "telegram-links.json"), "utf8"),
+);
 const errors = [];
 const slugs = new Set();
 
@@ -33,10 +36,20 @@ for (const material of materials) {
 }
 
 if (!materials.length) errors.push("Каталог порожній.");
+for (const [slug, telegramUrl] of Object.entries(telegramLinks)) {
+  if (!slugs.has(slug)) {
+    errors.push(`Telegram-посилання має невідомий slug: ${slug}`);
+  }
+  if (!/^https:\/\/t\.me\/gotovo_do_uroku\/\d+$/.test(telegramUrl)) {
+    errors.push(`Некоректне пряме Telegram-посилання: ${slug}`);
+  }
+}
 
 if (errors.length) {
   console.error(errors.join("\n"));
   process.exitCode = 1;
 } else {
-  console.log(`Каталог перевірено: ${materials.length} матеріалів, помилок немає.`);
+  console.log(
+    `Каталог перевірено: ${materials.length} матеріалів, ${Object.keys(telegramLinks).length} прямих Telegram-посилань, помилок немає.`,
+  );
 }

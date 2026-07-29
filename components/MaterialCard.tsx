@@ -72,16 +72,18 @@ export function MaterialCard({ material }: { material: MaterialSummary }) {
               Всеосвіта
               <ArrowUpRight size={17} aria-hidden="true" />
             </a>
-            <a
-              className="text-action card-telegram-action"
-              href={material.telegramUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Перейти в Telegram-канал «Готово до уроку»"
-            >
-              <Send size={16} aria-hidden="true" />
-              Telegram
-            </a>
+            {material.telegramUrl && (
+              <a
+                className="text-action card-telegram-action"
+                href={material.telegramUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`Відкрити «${material.title}» у Telegram`}
+              >
+                <Send size={16} aria-hidden="true" />
+                Telegram
+              </a>
+            )}
           </div>
         </div>
       </div>

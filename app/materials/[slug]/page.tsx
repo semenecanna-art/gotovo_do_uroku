@@ -99,7 +99,7 @@ export default async function MaterialPage({
     learningResourceType: material.materialType || undefined,
     isAccessibleForFree: material.isFree,
     datePublished: material.createdAt || undefined,
-    sameAs: [material.vseosvitaUrl, material.telegramUrl],
+    sameAs: [material.vseosvitaUrl, material.telegramUrl].filter(Boolean),
   };
 
   return (
@@ -190,19 +190,23 @@ export default async function MaterialPage({
                 {material.isFree ? "Відкрити на Всеосвіті" : "Купити на Всеосвіті"}
                 <ArrowUpRight size={20} aria-hidden="true" />
               </a>
-              <a
-                className="button button-telegram"
-                href={material.telegramUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Send size={19} aria-hidden="true" />
-                Перейти в Telegram
-              </a>
+              {material.telegramUrl && (
+                <a
+                  className="button button-telegram"
+                  href={material.telegramUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Send size={19} aria-hidden="true" />
+                  Відкрити матеріал у Telegram
+                </a>
+              )}
               <ShareButton title={material.title} />
             </div>
             <p className="external-note">
               Оплата й завантаження відбуваються на платформі «Всеосвіта».
+              {material.telegramUrl &&
+                " Telegram-кнопка відкриває прямий допис із файлом матеріалу."}
             </p>
           </div>
         </article>
@@ -240,15 +244,17 @@ export default async function MaterialPage({
                 Переглянути на Всеосвіті
                 <ArrowUpRight size={17} aria-hidden="true" />
               </a>
-              <a
-                className="text-action card-telegram-action"
-                href={material.telegramUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                <Send size={17} aria-hidden="true" />
-                Відкрити Telegram-канал
-              </a>
+              {material.telegramUrl && (
+                <a
+                  className="text-action card-telegram-action"
+                  href={material.telegramUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  <Send size={17} aria-hidden="true" />
+                  Відкрити матеріал у Telegram
+                </a>
+              )}
             </div>
           </aside>
         </section>

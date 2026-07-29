@@ -70,21 +70,35 @@ check(
   "На головній є щонайменше 6 реальних прев’ю",
 );
 const homeTelegramLinks = page.locator(
-  '.home-materials .material-card a[href="https://t.me/gotovo_do_uroku"]',
+  '.home-materials .material-card a[href^="https://t.me/gotovo_do_uroku/"]',
 );
 check(
-  (await homeTelegramLinks.count()) >= 6,
-  "Кожна картка популярних матеріалів має посилання на Telegram",
+  (await homeTelegramLinks.count()) >= 1,
+  "На картках є перевірені прямі посилання на матеріали в Telegram",
 );
 check(
   (await homeTelegramLinks.evaluateAll((links) =>
     links.every(
       (link) =>
+        /^https:\/\/t\.me\/gotovo_do_uroku\/\d+$/.test(link.href) &&
         link.getAttribute("target") === "_blank" &&
         link.getAttribute("rel")?.includes("noopener"),
     ),
   )),
-  "Telegram-посилання на картках безпечно відкриваються в новій вкладці",
+  "Telegram-посилання на картках ведуть на конкретні дописи й безпечно відкриваються в новій вкладці",
+);
+check(
+  (await page.locator(
+    '.home-materials .material-card a[href="https://t.me/gotovo_do_uroku"]',
+  ).count()) === 0,
+  "На картках немає оманливого посилання лише на головну сторінку каналу",
+);
+const telegramMaterialHref = await homeTelegramLinks.first().evaluate((link) =>
+  link.closest(".material-card")?.querySelector("h3 a")?.getAttribute("href"),
+);
+check(
+  Boolean(telegramMaterialHref),
+  "Для прямого Telegram-посилання визначена сторінка матеріалу",
 );
 const homeImageLocators = page.locator(".home-materials img");
 for (let index = 0; index < (await homeImageLocators.count()); index += 1) {
@@ -166,19 +180,38 @@ check(
   await page.locator(".gallery-main-image img").isVisible(),
   "Головне зображення галереї видно",
 );
+await page.goto(new URL(telegramMaterialHref, baseUrl).href, {
+  waitUntil: "domcontentloaded",
+});
 const detailTelegramLink = page.locator(
-  '.detail-actions a[href="https://t.me/gotovo_do_uroku"]',
+  '.detail-actions a[href^="https://t.me/gotovo_do_uroku/"]',
 );
 check(
   (await detailTelegramLink.count()) === 1 &&
     (await detailTelegramLink.isVisible()),
-  "На сторінці матеріалу є помітна кнопка Telegram",
+  "На сторінці доступного матеріалу є помітна кнопка Telegram",
 );
 check(
+  /^https:\/\/t\.me\/gotovo_do_uroku\/\d+$/.test(
+    (await detailTelegramLink.getAttribute("href")) || "",
+  ) &&
   (await detailTelegramLink.getAttribute("target")) === "_blank" &&
     (await detailTelegramLink.getAttribute("rel"))?.includes("noopener"),
-  "Кнопка Telegram на сторінці матеріалу має правильну й безпечну адресу",
+  "Кнопка Telegram на сторінці матеріалу має пряму й безпечну адресу",
 );
+const directTelegramUrl = await detailTelegramLink.getAttribute("href");
+const telegramPostPage = await desktop.newPage();
+await telegramPostPage.goto(`${directTelegramUrl}?embed=1&mode=tme`, {
+  waitUntil: "domcontentloaded",
+  timeout: 60_000,
+});
+check(
+  (await telegramPostPage
+    .locator(".tgme_widget_message_document_title")
+    .count()) > 0,
+  "Прямий допис Telegram містить файл для перегляду або завантаження",
+);
+await telegramPostPage.close();
 await page.screenshot({
   path: path.join(outputDir, "material-detail-desktop.png"),
   fullPage: true,
@@ -251,7 +284,7 @@ check(
 );
 check(
   await page
-    .locator('.detail-actions a[href="https://t.me/gotovo_do_uroku"]')
+    .locator('.detail-actions a[href^="https://t.me/gotovo_do_uroku/"]')
     .isVisible(),
   "Telegram-кнопка зберігається після прямого відкриття сторінки матеріалу",
 );
@@ -304,17 +337,12 @@ await mobilePage.screenshot({
   path: path.join(outputDir, "catalog-mobile.png"),
   fullPage: false,
 });
-const mobileMaterialHref = await mobilePage
-  .locator(".material-card h3 a")
-  .first()
-  .getAttribute("href");
-check(Boolean(mobileMaterialHref), "На мобільному доступний перехід до матеріалу");
-await mobilePage.goto(new URL(mobileMaterialHref, baseUrl).href, {
+await mobilePage.goto(new URL(telegramMaterialHref, baseUrl).href, {
   waitUntil: "domcontentloaded",
 });
 check(
   await mobilePage
-    .locator('.detail-actions a[href="https://t.me/gotovo_do_uroku"]')
+    .locator('.detail-actions a[href^="https://t.me/gotovo_do_uroku/"]')
     .isVisible(),
   "Telegram-кнопка видима на мобільній сторінці матеріалу",
 );

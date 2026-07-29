@@ -1,7 +1,13 @@
 import rawMaterials from "@/data/materials.json";
+import telegramLinks from "@/data/telegram-links.json";
 import type { Material, MaterialSummary } from "@/lib/types";
 
-export const materials = rawMaterials as Material[];
+const directTelegramLinks = telegramLinks as Record<string, string>;
+
+export const materials = (rawMaterials as Material[]).map((material) => ({
+  ...material,
+  telegramUrl: directTelegramLinks[material.slug] || "",
+}));
 
 export const materialSummaries: MaterialSummary[] = materials.map(
   ({
