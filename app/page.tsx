@@ -4,6 +4,7 @@ import {
   Clock3,
   GraduationCap,
   PrinterCheck,
+  Scissors,
 } from "lucide-react";
 import { AuthorSection } from "@/components/AuthorSection";
 import { CategoryCard } from "@/components/CategoryCard";
@@ -108,6 +109,24 @@ export default function HomePage() {
             </div>
           </article>
         ))}
+      </section>
+
+      <section className="site-container home-tool-promo">
+        <span className="home-tool-icon">
+          <Scissors size={38} strokeWidth={2.3} aria-hidden="true" />
+        </span>
+        <div>
+          <small>Безкоштовний інструмент для вчителя</small>
+          <h2>Розріж зображення для плаката, гри або пазла</h2>
+          <p>
+            Обери сітку, переглянь майбутні частини й завантаж усі фрагменти одним
+            ZIP-архівом. Зображення нікуди не надсилається.
+          </p>
+        </div>
+        <a className="button button-primary" href="/rozrizaty-zobrazhennya/">
+          <Scissors size={19} aria-hidden="true" />
+          Відкрити інструмент
+        </a>
       </section>
 
       <section className="site-container section-space">

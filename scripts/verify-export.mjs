@@ -11,6 +11,7 @@ const required = [
   "index.html",
   "catalog/index.html",
   "free/index.html",
+  "rozrizaty-zobrazhennya/index.html",
   "about/index.html",
   "how-to-buy/index.html",
   "contacts/index.html",

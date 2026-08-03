@@ -9,6 +9,7 @@ import {
 const links = [
   { href: "/catalog/", label: "Каталог" },
   { href: "/free/", label: "Безкоштовні матеріали" },
+  { href: "/rozrizaty-zobrazhennya/", label: "Розрізати зображення" },
   { href: "/about/", label: "Про автора" },
   { href: "/how-to-buy/", label: "Як придбати" },
   { href: "/contacts/", label: "Контакти" },

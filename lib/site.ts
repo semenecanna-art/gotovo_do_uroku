@@ -1,5 +1,5 @@
 export const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ?? "https://gotovo-do-uroku.netlify.app";
+  process.env.NEXT_PUBLIC_SITE_URL ?? "https://gotovo-do-uroku.com.ua";
 
 export const TELEGRAM_URL = "https://t.me/gotovo_do_uroku";
 export const VSEOSVITA_URL = "https://vseosvita.ua/user/id9131/library";

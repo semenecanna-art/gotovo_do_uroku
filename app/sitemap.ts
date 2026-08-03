@@ -9,6 +9,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
     "",
     "/catalog/",
     "/free/",
+    "/rozrizaty-zobrazhennya/",
     "/about/",
     "/how-to-buy/",
     "/contacts/",
@@ -18,7 +19,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   return [
     ...staticPages.map((path, index) => ({
       url: `${SITE_URL}${path}`,
-      lastModified: new Date("2026-07-29"),
+      lastModified: new Date("2026-08-03"),
       changeFrequency: index < 3 ? ("weekly" as const) : ("monthly" as const),
       priority: index === 0 ? 1 : index < 3 ? 0.9 : 0.6,
     })),

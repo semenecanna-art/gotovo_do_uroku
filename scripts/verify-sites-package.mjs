@@ -26,6 +26,7 @@ async function inspect(directory) {
 await inspect(path.resolve("dist"));
 await access(path.resolve("dist/.openai/hosting.json"));
 await access(path.resolve("dist/server/index.js"));
+await access(path.join(clientDir, "rozrizaty-zobrazhennya", "index.html"));
 
 if (materialEntries.length !== 896) {
   throw new Error(`Expected 896 material directories, received ${materialEntries.length}.`);

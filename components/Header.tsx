@@ -10,6 +10,7 @@ const navigation = [
   { href: "/", label: "Головна" },
   { href: "/catalog/", label: "Каталог" },
   { href: "/free/", label: "Безкоштовні матеріали" },
+  { href: "/rozrizaty-zobrazhennya/", label: "Розрізати фото" },
   { href: "/about/", label: "Про автора" },
   { href: "/how-to-buy/", label: "Як придбати" },
   { href: "/contacts/", label: "Контакти" },

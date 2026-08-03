@@ -129,8 +129,54 @@ check(
   homeImages.every((image) => image.complete && image.width > 0),
   "Зображення популярних матеріалів не биті",
 );
+check(
+  await page.locator('header a[href="/rozrizaty-zobrazhennya/"]').isVisible(),
+  "Інструмент для розрізання зображень доступний у головному меню",
+);
 await page.screenshot({
   path: path.join(outputDir, "home-desktop.png"),
+  fullPage: true,
+});
+
+await page.goto(`${baseUrl}/rozrizaty-zobrazhennya/`, {
+  waitUntil: "domcontentloaded",
+  timeout: 60_000,
+});
+check(
+  await page.getByRole("heading", { name: /Розріж зображення/ }).isVisible(),
+  "Сторінка інструмента відкривається",
+);
+await page.waitForFunction(() => typeof window.JSZip === "function", null, {
+  timeout: 30_000,
+});
+await page
+  .locator('input[data-testid="splitter-file"]')
+  .setInputFiles(path.join(process.cwd(), "public", "brand", "logo.png"));
+await page.locator(".splitter-editor").waitFor({ state: "visible", timeout: 30_000 });
+await page.getByLabel("Частин по ширині").fill("3");
+await page.getByLabel("Частин по висоті").fill("2");
+check(
+  (await page.locator(".splitter-grid-badge").innerText()).includes("6 частин"),
+  "Сітка 3 × 2 показує 6 частин",
+);
+const splitterDownload = page.waitForEvent("download", { timeout: 60_000 });
+await page.getByRole("button", { name: "Розрізати й завантажити ZIP" }).click();
+const downloadedArchive = await splitterDownload;
+const archivePath = path.join(outputDir, "splitter-3x2.zip");
+await downloadedArchive.saveAs(archivePath);
+const archiveBinary = (await fs.readFile(archivePath)).toString("latin1");
+const pieceNames = new Set(
+  Array.from(
+    archiveBinary.matchAll(/chastyna-r\d{2}-c\d{2}\.png/g),
+    (match) => match[0],
+  ),
+);
+check(
+  pieceNames.size === 6 && archiveBinary.includes("prochytai-mene.txt"),
+  "ZIP для сітки 3 × 2 містить шість PNG-частин та інструкцію",
+);
+await page.screenshot({
+  path: path.join(outputDir, "image-splitter-desktop.png"),
   fullPage: true,
 });
 
@@ -357,6 +403,25 @@ check(
 );
 await mobilePage.screenshot({
   path: path.join(outputDir, "material-detail-mobile.png"),
+  fullPage: true,
+});
+
+await mobilePage.goto(`${baseUrl}/rozrizaty-zobrazhennya/`, {
+  waitUntil: "domcontentloaded",
+});
+check(
+  await mobilePage.getByRole("heading", { name: /Розріж зображення/ }).isVisible(),
+  "Інструмент відкривається на мобільному",
+);
+const splitterMobileOverflow = await mobilePage.evaluate(
+  () => document.documentElement.scrollWidth - document.documentElement.clientWidth,
+);
+check(
+  splitterMobileOverflow <= 1,
+  "На мобільній сторінці інструмента немає горизонтального прокручування",
+);
+await mobilePage.screenshot({
+  path: path.join(outputDir, "image-splitter-mobile.png"),
   fullPage: true,
 });
 
