@@ -84,6 +84,34 @@ check(
   await page.getByRole("heading", { name: "Новинки", exact: true }).isVisible(),
   "На головній показано розділ «Новинки»",
 );
+check(
+  await page
+    .getByLabel("Знайти матеріал за темою або класом")
+    .isVisible(),
+  "На головній є помітний пошук за темою або класом",
+);
+const homeSearchPage = await desktop.newPage();
+await homeSearchPage.goto(baseUrl, {
+  waitUntil: "domcontentloaded",
+  timeout: 60_000,
+});
+await homeSearchPage
+  .getByLabel("Знайти матеріал за темою або класом")
+  .fill("Росток");
+await Promise.all([
+  homeSearchPage.waitForURL(/\/catalog\/?\?search=/, { timeout: 30_000 }),
+  homeSearchPage.getByRole("button", { name: "Знайти", exact: true }).click(),
+]);
+await homeSearchPage.locator(".material-card").first().waitFor({
+  state: "visible",
+  timeout: 30_000,
+});
+check(
+  (await homeSearchPage.locator(".material-card").count()) > 0 &&
+    new URL(homeSearchPage.url()).searchParams.get("search") === "Росток",
+  "Пошук із головної відкриває каталог із відповідними результатами",
+);
+await homeSearchPage.close();
 const homeMaterialSlugs = await page
   .locator(".home-materials .material-card h3 a")
   .evaluateAll((links) =>
@@ -253,6 +281,13 @@ check(
 await page.goto(new URL(telegramMaterialHref, baseUrl).href, {
   waitUntil: "domcontentloaded",
 });
+const cleanedDescription = await page.locator(".description-main").innerText();
+check(
+  !/;(?=[\p{L}\p{N}«“„])|:(?=[\p{L}«“„])|\.(?=[А-ЯІЇЄҐA-Z])/gu.test(
+    cleanedDescription,
+  ),
+  "В описі матеріалу автоматично виправлені пропущені пробіли",
+);
 const detailTelegramLink = page.locator(
   '.detail-actions a[href^="https://t.me/gotovo_do_uroku/"]',
 );
@@ -375,6 +410,29 @@ mobilePage.on("console", (message) => {
   }
 });
 await mobilePage.goto(baseUrl, { waitUntil: "domcontentloaded" });
+check(
+  await mobilePage.locator(".hero-portrait-mobile").isVisible(),
+  "На телефоні широкий банер замінено компактним образом авторки",
+);
+check(
+  !(await mobilePage.locator(".hero-banner-desktop").isVisible()),
+  "Широкий бренд-банер прихований на телефоні",
+);
+const visibleMobileNewest = await mobilePage
+  .locator(".home-materials .material-card")
+  .evaluateAll((cards) =>
+    cards.filter((card) => getComputedStyle(card).display !== "none").length,
+  );
+check(
+  visibleMobileNewest === 4,
+  "На телефоні показано чотири новинки та кнопку переходу до всіх матеріалів",
+);
+check(
+  await mobilePage
+    .getByLabel("Знайти матеріал за темою або класом")
+    .isVisible(),
+  "Пошук зручно доступний на телефоні",
+);
 const overflow = await mobilePage.evaluate(
   () =>
     document.documentElement.scrollWidth -

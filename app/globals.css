@@ -509,6 +509,64 @@ h3 {
   font-size: 1.15rem;
 }
 
+.home-search {
+  max-width: 650px;
+  margin-bottom: 22px;
+  padding: 15px;
+  border: 3px solid white;
+  border-radius: 24px;
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.96), #fff3f9);
+  box-shadow: 0 15px 32px rgba(73, 36, 112, 0.14);
+}
+
+.home-search > label {
+  display: block;
+  margin: 0 0 9px 4px;
+  color: var(--ink);
+  font-size: 0.92rem;
+  font-weight: 850;
+}
+
+.home-search > div {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 6px 6px 6px 14px;
+  border: 2px solid #f2d9e7;
+  border-radius: 17px;
+  background: white;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.home-search > div:focus-within {
+  border-color: var(--pink);
+  box-shadow: 0 0 0 4px rgba(247, 46, 136, 0.11);
+}
+
+.home-search svg {
+  color: var(--pink-dark);
+}
+
+.home-search input {
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  color: var(--ink);
+  background: transparent;
+  font: inherit;
+}
+
+.home-search input::placeholder {
+  color: #858ba2;
+}
+
+.home-search .button {
+  min-height: 43px;
+  padding: 9px 20px;
+  box-shadow: 0 6px 0 rgba(86, 42, 126, 0.2);
+}
+
 .hero-actions {
   display: flex;
   flex-wrap: wrap;
@@ -2608,6 +2666,10 @@ h3 {
   transform: translateY(0);
 }
 
+.hero-portrait-mobile {
+  display: none;
+}
+
 /* Image splitter */
 
 .home-tool-promo {
@@ -3527,6 +3589,20 @@ h3 {
     font-size: 1rem;
   }
 
+  .home-search {
+    margin-inline: auto;
+    text-align: left;
+  }
+
+  .home-search > div {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .home-search .button {
+    grid-column: 1 / -1;
+    width: 100%;
+  }
+
   .hero-actions {
     display: grid;
   }
@@ -3537,6 +3613,19 @@ h3 {
 
   .hero-visual {
     padding-bottom: 75px;
+  }
+
+  .hero-banner-desktop {
+    display: none;
+  }
+
+  .hero-visual > .hero-portrait-mobile {
+    display: block;
+    width: min(250px, 68vw);
+    height: auto;
+    margin-inline: auto;
+    border-width: 5px;
+    border-radius: 50%;
   }
 
   .hero-visual > img {
@@ -3577,6 +3666,10 @@ h3 {
   .home-materials,
   .related-section .material-grid {
     grid-template-columns: 1fr;
+  }
+
+  .home-materials .material-card:nth-child(n + 5) {
+    display: none;
   }
 
   .material-card {

@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { ArrowRight, Check, Send, Sparkles } from "lucide-react";
+import { ArrowRight, Check, Search, Send, Sparkles } from "lucide-react";
 import { SafeImage } from "@/components/SafeImage";
 import { TELEGRAM_URL } from "@/lib/site";
 import type { MaterialSummary } from "@/lib/types";
@@ -26,6 +26,29 @@ export function Hero({
             Готові презентації, картки, плакати, наочність та тематичні
             комплекти для вчителів початкових класів.
           </p>
+          <form
+            className="home-search"
+            action="/catalog/"
+            method="get"
+            role="search"
+          >
+            <label htmlFor="home-material-search">
+              Знайти матеріал за темою або класом
+            </label>
+            <div>
+              <Search size={22} aria-hidden="true" />
+              <input
+                id="home-material-search"
+                name="search"
+                type="search"
+                placeholder="Наприклад: 2 клас, математика, Росток"
+                required
+              />
+              <button className="button button-primary" type="submit">
+                Знайти
+              </button>
+            </div>
+          </form>
           <div className="hero-actions">
             <a className="button button-primary" href="/catalog/">
               Переглянути матеріали
@@ -59,12 +82,22 @@ export function Hero({
             ♥
           </span>
           <Image
+            className="hero-banner-desktop"
             src="/brand/hero-banner.png"
             width={2048}
             height={848}
             alt="Готово до уроку — авторські матеріали для початкової школи"
             priority
             sizes="(max-width: 900px) 96vw, 54vw"
+          />
+          <Image
+            className="hero-portrait-mobile"
+            src="/brand/logo.png"
+            width={1254}
+            height={1254}
+            alt="Авторка бренду «Готово до уроку»"
+            priority
+            sizes="(max-width: 700px) 68vw, 1px"
           />
           <div className="hero-materials" aria-label="Прев’ю матеріалів">
             {featured.slice(0, 3).map((material) => (

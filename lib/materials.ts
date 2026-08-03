@@ -4,8 +4,18 @@ import type { Material, MaterialSummary } from "@/lib/types";
 
 const directTelegramLinks = telegramLinks as Record<string, string>;
 
+export const tidyMaterialText = (value: string) =>
+  (value || "")
+    .replace(/;(?=[\p{L}\p{N}«“„])/gu, "; ")
+    .replace(/:(?=[\p{L}«“„])/gu, ": ")
+    .replace(/\.(?=[А-ЯІЇЄҐA-Z])/gu, ". ")
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+
 export const materials = (rawMaterials as Material[]).map((material) => ({
   ...material,
+  shortDescription: tidyMaterialText(material.shortDescription),
+  fullDescription: tidyMaterialText(material.fullDescription),
   telegramUrl: directTelegramLinks[material.slug] || "",
 }));
 
