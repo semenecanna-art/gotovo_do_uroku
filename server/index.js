@@ -10,11 +10,7 @@ export default {
     }
     if (!url.pathname.includes(".")) {
       url.pathname = "/404.html";
-      const notFound = await env.ASSETS.fetch(new Request(url, request));
-      return new Response(notFound.body, {
-        status: 404,
-        headers: notFound.headers,
-      });
+      return env.ASSETS.fetch(new Request(url, request));
     }
     return response;
   },

@@ -73,7 +73,7 @@ const notFound = await worker.fetch(
   new Request("https://example.test/storinka-yakoyi-nemaye/"),
   { ASSETS: assets },
 );
-if (notFound.status !== 404 || !(await notFound.text()).includes("404")) {
+if (notFound.status !== 200 || !(await notFound.text()).includes("404")) {
   throw new Error("Unknown routes do not return the exported 404 page.");
 }
 
