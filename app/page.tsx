@@ -72,6 +72,13 @@ export default function HomePage() {
   const featured = markedFeatured.length
     ? markedFeatured
     : materialSummaries.slice(0, 8);
+  const newestMaterials = [...materialSummaries]
+    .sort((first, second) => {
+      const firstDate = Date.parse(first.createdAt) || 0;
+      const secondDate = Date.parse(second.createdAt) || 0;
+      return secondDate - firstDate || second.id.localeCompare(first.id, "uk");
+    })
+    .slice(0, 8);
   const categoryCounts = new Map(
     categories.map((category) => [category.name, category.count]),
   );
@@ -131,18 +138,18 @@ export default function HomePage() {
 
       <section className="site-container section-space">
         <SectionHeading
-          eyebrow="Добірка вчителів"
-          title="Популярні матеріали"
-          description="Матеріали з найбільшою кількістю публічних переглядів і завантажень у бібліотеці авторки."
+          eyebrow="Щойно додано"
+          title="Новинки"
+          description="Найновіші матеріали з бібліотеки авторки. Після кожного оновлення сайту тут автоматично з’являються останні додані роботи."
         />
         <div className="material-grid home-materials">
-          {featured.map((material) => (
+          {newestMaterials.map((material) => (
             <MaterialCard key={material.id} material={material} />
           ))}
         </div>
         <div className="center-action">
           <a className="button button-primary" href="/catalog/">
-            Відкрити весь каталог
+            Переглянути всі матеріали
           </a>
         </div>
       </section>

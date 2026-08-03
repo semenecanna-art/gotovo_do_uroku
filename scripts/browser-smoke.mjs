@@ -23,6 +23,17 @@ if (!executablePath) {
 
 const outputDir = path.join(process.cwd(), "test-results");
 await fs.mkdir(outputDir, { recursive: true });
+const materialData = JSON.parse(
+  await fs.readFile(path.join(process.cwd(), "data", "materials.json"), "utf8"),
+);
+const expectedNewestSlugs = [...materialData]
+  .sort((first, second) => {
+    const firstDate = Date.parse(first.createdAt) || 0;
+    const secondDate = Date.parse(second.createdAt) || 0;
+    return secondDate - firstDate || String(second.id).localeCompare(String(first.id), "uk");
+  })
+  .slice(0, 8)
+  .map((material) => material.slug);
 const browser = await chromium.launch({
   executablePath,
   headless: true,
@@ -68,6 +79,19 @@ check(
 check(
   (await page.locator(".home-materials .material-card").count()) >= 6,
   "На головній є щонайменше 6 реальних прев’ю",
+);
+check(
+  await page.getByRole("heading", { name: "Новинки", exact: true }).isVisible(),
+  "На головній показано розділ «Новинки»",
+);
+const homeMaterialSlugs = await page
+  .locator(".home-materials .material-card h3 a")
+  .evaluateAll((links) =>
+    links.map((link) => link.getAttribute("href")?.split("/").filter(Boolean).at(-1)),
+  );
+check(
+  JSON.stringify(homeMaterialSlugs) === JSON.stringify(expectedNewestSlugs),
+  "Розділ «Новинки» автоматично показує 8 найновіших матеріалів за датою",
 );
 const homeTelegramLinks = page.locator(
   '.home-materials .material-card a[href^="https://t.me/gotovo_do_uroku/"]',
@@ -127,7 +151,7 @@ const homeImages = await page
   );
 check(
   homeImages.every((image) => image.complete && image.width > 0),
-  "Зображення популярних матеріалів не биті",
+  "Зображення новинок не биті",
 );
 check(
   await page.locator('header a[href="/rozrizaty-zobrazhennya/"]').isVisible(),
