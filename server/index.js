@@ -9,8 +9,12 @@ export default {
       return env.ASSETS.fetch(new Request(url, request));
     }
     if (!url.pathname.includes(".")) {
-      url.pathname = "/index.html";
-      return env.ASSETS.fetch(new Request(url, request));
+      url.pathname = "/404.html";
+      const notFound = await env.ASSETS.fetch(new Request(url, request));
+      return new Response(notFound.body, {
+        status: 404,
+        headers: notFound.headers,
+      });
     }
     return response;
   },

@@ -69,6 +69,14 @@ if (routed.status !== 200 || !received.equals(expected)) {
   throw new Error("The removed Next.js payload is not restored by the worker route.");
 }
 
+const notFound = await worker.fetch(
+  new Request("https://example.test/storinka-yakoyi-nemaye/"),
+  { ASSETS: assets },
+);
+if (notFound.status !== 404 || !(await notFound.text()).includes("404")) {
+  throw new Error("Unknown routes do not return the exported 404 page.");
+}
+
 console.log(
-  `Sites package verified: ${materialEntries.length} materials, ${(bytes / 1024 / 1024).toFixed(2)} MB, payload routing works.`,
+  `Sites package verified: ${materialEntries.length} materials, ${(bytes / 1024 / 1024).toFixed(2)} MB, payload and 404 routing work.`,
 );
