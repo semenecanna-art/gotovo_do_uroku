@@ -2,6 +2,7 @@ node_modules
 .next
 .next-stale-*
 out
+dist
 .netlify
 .env*
 !.env.example
