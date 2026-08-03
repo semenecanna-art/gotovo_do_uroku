@@ -13,6 +13,7 @@
     "validate:images": "node scripts/verify-images.mjs",
     "optimize:covers": "node scripts/optimize-covers.mjs",
     "test:export": "node scripts/verify-export.mjs",
+    "test:sites-package": "node scripts/verify-sites-package.mjs",
     "test:browser": "node scripts/browser-smoke.mjs"
   },
   "dependencies": {
