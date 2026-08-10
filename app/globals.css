@@ -631,6 +631,25 @@ h3 {
   box-shadow: 0 15px 31px rgba(42, 22, 79, 0.22);
   transform: rotate(-4deg);
   transition: transform 0.2s ease;
+  animation: hero-preview-swap 420ms ease both;
+}
+
+@keyframes hero-preview-swap {
+  from {
+    opacity: 0;
+    filter: blur(3px);
+  }
+
+  to {
+    opacity: 1;
+    filter: blur(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .hero-materials a {
+    animation: none;
+  }
 }
 
 .hero-materials a:nth-child(2) {

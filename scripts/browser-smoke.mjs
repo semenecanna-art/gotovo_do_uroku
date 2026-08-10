@@ -91,6 +91,31 @@ check(
   (await page.locator(".home-materials .material-card").count()) >= 6,
   "На головній є щонайменше 6 реальних прев’ю",
 );
+const heroPreviewLinks = page.locator(".hero-materials a");
+check(
+  (await heroPreviewLinks.count()) === 3,
+  "Під головним банером показано три прев’ю найновіших матеріалів",
+);
+const initialHeroPreviews = await heroPreviewLinks.evaluateAll((links) =>
+  links.map((link) => link.getAttribute("href")),
+);
+await page.waitForFunction(
+  (initial) => {
+    const current = [...document.querySelectorAll(".hero-materials a")].map(
+      (link) => link.getAttribute("href"),
+    );
+    return JSON.stringify(current) !== JSON.stringify(initial);
+  },
+  initialHeroPreviews,
+  { timeout: 7_500 },
+);
+const changedHeroPreviews = await heroPreviewLinks.evaluateAll((links) =>
+  links.map((link) => link.getAttribute("href")),
+);
+check(
+  JSON.stringify(changedHeroPreviews) !== JSON.stringify(initialHeroPreviews),
+  "Прев’ю під головним банером автоматично змінюються за таймером",
+);
 check(
   await page.getByRole("heading", { name: "Новинки", exact: true }).isVisible(),
   "На головній показано розділ «Новинки»",

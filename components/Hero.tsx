@@ -1,4 +1,7 @@
+"use client";
+
 import Image from "next/image";
+import { useEffect, useState } from "react";
 import { ArrowRight, Check, Search, Send, Sparkles } from "lucide-react";
 import { SafeImage } from "@/components/SafeImage";
 import { TELEGRAM_URL } from "@/lib/site";
@@ -11,6 +14,24 @@ export function Hero({
   total: number;
   featured: MaterialSummary[];
 }) {
+  const [previewStart, setPreviewStart] = useState(0);
+  const [previewPaused, setPreviewPaused] = useState(false);
+  const previewCount = Math.min(3, featured.length);
+  const visibleMaterials = Array.from({ length: previewCount }, (_, index) =>
+    featured[(previewStart + index) % featured.length],
+  );
+
+  useEffect(() => {
+    if (featured.length <= previewCount || previewPaused) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const timer = window.setInterval(() => {
+      setPreviewStart((current) => (current + 1) % featured.length);
+    }, 5000);
+
+    return () => window.clearInterval(timer);
+  }, [featured.length, previewCount, previewPaused]);
+
   return (
     <section className="hero-section">
       <span className="hero-dot hero-dot-one" aria-hidden="true" />
@@ -99,10 +120,17 @@ export function Hero({
             priority
             sizes="(max-width: 700px) 68vw, 1px"
           />
-          <div className="hero-materials" aria-label="Прев’ю матеріалів">
-            {featured.slice(0, 3).map((material) => (
+          <div
+            className="hero-materials"
+            aria-label="Прев’ю найновіших матеріалів"
+            onMouseEnter={() => setPreviewPaused(true)}
+            onMouseLeave={() => setPreviewPaused(false)}
+            onFocusCapture={() => setPreviewPaused(true)}
+            onBlurCapture={() => setPreviewPaused(false)}
+          >
+            {visibleMaterials.map((material) => (
               <a
-                key={material.id}
+                key={`${previewStart}-${material.id}`}
                 href={`/materials/${material.slug}/`}
                 aria-label={`Відкрити «${material.title}»`}
               >

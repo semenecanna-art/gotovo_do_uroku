@@ -66,12 +66,6 @@ const benefits = [
 ];
 
 export default function HomePage() {
-  const markedFeatured = materialSummaries
-    .filter((material) => material.isFeatured)
-    .slice(0, 8);
-  const featured = markedFeatured.length
-    ? markedFeatured
-    : materialSummaries.slice(0, 8);
   const newestMaterials = [...materialSummaries]
     .sort((first, second) => {
       const firstDate = Date.parse(first.createdAt) || 0;
@@ -102,7 +96,7 @@ export default function HomePage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
       />
-      <Hero total={materials.length} featured={featured.slice(0, 3)} />
+      <Hero total={materials.length} featured={newestMaterials} />
 
       <section className="site-container benefits-grid section-overlap">
         {benefits.map(({ title, description, icon: Icon }, index) => (
