@@ -351,6 +351,24 @@ const idf = (token) =>
   Math.log((materials.length + 1) / ((documentFrequency.get(token) || 0) + 1)) +
   1;
 
+const extractVseosvitaIds = (value) =>
+  [
+    ...String(value || "").matchAll(
+      /vseosvita\.ua\/library\/[^\s"'<>]*?-(\d+)\.html/giu,
+    ),
+  ].map((match) => match[1]);
+
+const extractSeriesSignature = (value) => {
+  const normalized = normalize(value);
+  return {
+    lesson:
+      normalized.match(/(?:^| )урок\s*(\d+)(?: |$)/u)?.[1] || "",
+    part:
+      normalized.match(/(?:^| )(?:ч|частина)\s*\.?\s*(\d+)(?: |$)/u)?.[1] ||
+      "",
+  };
+};
+
 const weightedCoverage = (query, targetTokens) => {
   const queryTokens = [...new Set(tokenize(query))];
   const total = queryTokens.reduce((sum, token) => sum + idf(token), 0);
@@ -366,6 +384,117 @@ const weightedCoverage = (query, targetTokens) => {
 
 const matches = [];
 const groupReports = [];
+
+const materialById = new Map(
+  materials.map((material) => [String(material.id), material]),
+);
+
+// A link to the exact Vseosvita material inside a Telegram post is the
+// strongest possible evidence. These announcements are often text/photo
+// posts rather than document posts, so they must be checked separately.
+for (const post of posts) {
+  for (const materialId of new Set(extractVseosvitaIds(post.text))) {
+    const material = materialById.get(materialId);
+    if (!material) continue;
+    matches.push({
+      slug: material.slug,
+      title: material.title,
+      telegramUrl: post.url,
+      directPostId: post.id,
+      score: 1,
+      evidence: "vseosvita-url",
+      documents: post.documents,
+      navigatorLabel: "",
+      contextPostId: post.id,
+    });
+  }
+}
+
+// Many channel publications do not contain a Vseosvita URL. Match only
+// highly distinctive titles published at practically the same time as the
+// material. The strict rare-token and lesson/part checks intentionally leave
+// ambiguous items unmatched instead of showing a wrong Telegram button.
+const datedTextPosts = meaningfulTextPosts.filter(
+  (post) =>
+    !CATALOG_POST_IDS.includes(post.id) &&
+    post.text.length <= 3500 &&
+    !/що завантажити цього тижня/iu.test(post.text),
+);
+
+for (const material of materials) {
+  const materialTime = Date.parse(material.createdAt);
+  if (!Number.isFinite(materialTime)) continue;
+  const titleTokens = [...new Set(tokenize(material.title))];
+  const rareTitleTokens = titleTokens.filter((token) => idf(token) >= 3.4);
+  const materialSignature = extractSeriesSignature(material.title);
+  const candidates = datedTextPosts
+    .filter((post) => {
+      const postTime = Date.parse(post.datetime);
+      return (
+        Number.isFinite(postTime) &&
+        Math.abs(postTime - materialTime) <= 36 * 60 * 60 * 1000
+      );
+    })
+    .map((post) => {
+      const sourceTokens = new Set(tokenize(post.text));
+      const titleCoverage = weightedCoverage(material.title, sourceTokens);
+      const sourceSignature = extractSeriesSignature(post.text);
+      const seriesMatches =
+        (!materialSignature.lesson ||
+          sourceSignature.lesson === materialSignature.lesson) &&
+        (!materialSignature.part ||
+          !sourceSignature.part ||
+          sourceSignature.part === materialSignature.part);
+      const title = normalize(material.title);
+      const source = normalize(post.text);
+      const exactTitle =
+        title.length >= 8 && containsWholePhrase(source, title);
+      const rareMatched = rareTitleTokens.filter((token) =>
+        sourceTokens.has(token),
+      );
+      const rareMissing = rareTitleTokens.filter(
+        (token) => !sourceTokens.has(token),
+      );
+      return {
+        post,
+        exactTitle,
+        rareMatched,
+        rareMissing,
+        seriesMatches,
+        titleCoverage,
+      };
+    })
+    .sort(
+      (left, right) =>
+        right.titleCoverage.coverage - left.titleCoverage.coverage ||
+        Math.abs(Date.parse(left.post.datetime) - materialTime) -
+          Math.abs(Date.parse(right.post.datetime) - materialTime),
+    );
+
+  const best = candidates[0];
+  if (!best) continue;
+  const secondCoverage = candidates[1]?.titleCoverage.coverage || 0;
+  const margin = best.titleCoverage.coverage - secondCoverage;
+  const distinctiveMatch =
+    best.rareMatched.length >= 3 && best.rareMissing.length === 0;
+  const accepted =
+    best.seriesMatches &&
+    best.titleCoverage.coverage >= 0.78 &&
+    (best.exactTitle || (distinctiveMatch && margin >= 0.08));
+  if (!accepted) continue;
+
+  matches.push({
+    slug: material.slug,
+    title: material.title,
+    telegramUrl: best.post.url,
+    directPostId: best.post.id,
+    score: best.titleCoverage.coverage,
+    evidence: "dated-text",
+    documents: best.post.documents,
+    navigatorLabel: "",
+    contextPostId: best.post.id,
+  });
+}
 
 for (const group of documentGroups) {
   const navigatorLabel =
@@ -556,6 +685,12 @@ for (const material of materials) {
 }
 
 for (const match of [...matches]) {
+  if (
+    match.evidence === "vseosvita-url" ||
+    match.evidence === "dated-text"
+  ) {
+    continue;
+  }
   for (const duplicate of duplicateTitles.get(normalize(match.title)) || []) {
     if (duplicate.slug === match.slug) continue;
     matches.push({ ...match, slug: duplicate.slug, title: duplicate.title });
@@ -566,6 +701,7 @@ const evidenceWeight = {
   "vseosvita-url": 6,
   filename: 4,
   "exact-title": 3,
+  "dated-text": 2.5,
   "unique-phrase": 2,
   fuzzy: 1,
 };
