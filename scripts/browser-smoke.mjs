@@ -136,13 +136,15 @@ const homeTelegramLinks = page
   .locator(".home-materials .material-card")
   .locator(telegramPostSelector);
 check(
-  (await homeTelegramLinks.evaluateAll((links) =>
-    links.every(
-      (link) =>
-        telegramPostPattern.test(link.href) &&
-        link.getAttribute("target") === "_blank" &&
-        link.getAttribute("rel")?.includes("noopener"),
-    ),
+  (await homeTelegramLinks.evaluateAll(
+    (links, pattern) =>
+      links.every(
+        (link) =>
+          new RegExp(pattern).test(link.href) &&
+          link.getAttribute("target") === "_blank" &&
+          link.getAttribute("rel")?.includes("noopener"),
+      ),
+    telegramPostPattern.source,
   )),
   "Telegram-посилання на картках ведуть на конкретні дописи й безпечно відкриваються в новій вкладці",
 );

@@ -9,6 +9,7 @@ const CATALOG_POST_IDS = [
   2065, 2066, 2067, 2068, 2069, 2070, 2071, 2072, 2073, 2074, 2075,
 ];
 const WRITE = process.argv.includes("--write");
+const LIVE = process.argv.includes("--live");
 const root = process.cwd();
 
 const normalize = (value) =>
@@ -167,15 +168,80 @@ const crawlChannel = async () => {
   return [...posts.values()].sort((left, right) => left.id - right.id);
 };
 
-const readNavigator = async () => {
+const flattenExportText = (value) =>
+  (Array.isArray(value) ? value : [value])
+    .map((part) =>
+      typeof part === "string" ? part : typeof part?.text === "string" ? part.text : "",
+    )
+    .join("")
+    .trim();
+
+const findTelegramExport = async () => {
+  if (process.env.TELEGRAM_EXPORT_PATH) {
+    return path.resolve(process.env.TELEGRAM_EXPORT_PATH);
+  }
+  const exportsRoot = path.join(
+    process.env.USERPROFILE || "",
+    "Downloads",
+    "Telegram Desktop",
+  );
+  let entries = [];
+  try {
+    entries = await fs.readdir(exportsRoot, { withFileTypes: true });
+  } catch {
+    return "";
+  }
+  const candidates = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory() || !entry.name.startsWith("ChatExport_")) continue;
+    const file = path.join(exportsRoot, entry.name, "result.json");
+    try {
+      candidates.push({ file, modified: (await fs.stat(file)).mtimeMs });
+    } catch {
+      // Ignore incomplete export folders.
+    }
+  }
+  return candidates.sort((left, right) => right.modified - left.modified)[0]?.file || "";
+};
+
+const readTelegramExport = async () => {
+  const exportPath = await findTelegramExport();
+  if (!exportPath) return { posts: [], exportPath: "" };
+  const exported = JSON.parse(await fs.readFile(exportPath, "utf8"));
+  if (exported.type !== "public_channel" || !Array.isArray(exported.messages)) {
+    throw new Error(`Unexpected Telegram export format: ${exportPath}`);
+  }
+  const posts = exported.messages
+    .filter((message) => message.type === "message" && Number.isFinite(message.id))
+    .map((message) => ({
+      id: message.id,
+      url: `${CHANNEL_URL}/${message.id}`,
+      text: flattenExportText(message.text),
+      documents:
+        message.file_name && !/^(video|audio)\//i.test(message.mime_type || "")
+          ? [message.file_name]
+          : [],
+      datetime: message.date_unixtime
+        ? new Date(Number(message.date_unixtime) * 1000).toISOString()
+        : message.date || "",
+    }))
+    .sort((left, right) => left.id - right.id);
+  return { posts, exportPath };
+};
+
+const readNavigator = async (posts) => {
   const entries = [];
   for (const catalogPost of CATALOG_POST_IDS) {
-    const html = await fetchHtml(
-      `${CHANNEL_URL}/${catalogPost}?embed=1&mode=tme`,
-    );
-    const $ = cheerio.load(html);
-    $(".tgme_widget_message_text br").replaceWith("\n");
-    const text = $(".tgme_widget_message_text").text();
+    const exportedPost = posts.find((post) => post.id === catalogPost);
+    let text = exportedPost?.text || "";
+    if (!text) {
+      const html = await fetchHtml(
+        `${CHANNEL_URL}/${catalogPost}?embed=1&mode=tme`,
+      );
+      const $ = cheerio.load(html);
+      $(".tgme_widget_message_text br").replaceWith("\n");
+      text = $(".tgme_widget_message_text").text();
+    }
     for (const line of text
       .split(/\n+/)
       .map((value) => value.trim())
@@ -222,8 +288,16 @@ const materials = JSON.parse(
 const existingTelegramLinks = JSON.parse(
   await fs.readFile(path.join(root, "data", "telegram-links.json"), "utf8"),
 );
-const posts = await crawlChannel();
-const navigator = await readNavigator();
+const exportedChannel = LIVE
+  ? { posts: [], exportPath: "" }
+  : await readTelegramExport();
+const posts = exportedChannel.posts.length
+  ? exportedChannel.posts
+  : await crawlChannel();
+const telegramSource = exportedChannel.posts.length
+  ? exportedChannel.exportPath
+  : CHANNEL_URL;
+const navigator = await readNavigator(posts);
 const navigatorByTarget = new Map(
   navigator.map((entry) => [entry.targetId, entry]),
 );
@@ -252,7 +326,7 @@ for (const post of documentPosts) {
     post.text.length >= 4 && !/^https?:\/\//i.test(post.text)
       ? post
       : previousText || null;
-  const key = context ? `context-${context.id}` : `file-${post.id}`;
+  const key = `file-${post.id}`;
   if (!grouped.has(key)) grouped.set(key, { context, entries: [] });
   grouped.get(key).entries.push(post);
 }
@@ -295,11 +369,19 @@ const groupReports = [];
 
 for (const group of documentGroups) {
   const navigatorLabel =
-    navigatorByTarget.get(group.context?.id)?.label || "";
+    navigatorByTarget.get(group.directPostId)?.label ||
+    navigatorByTarget.get(group.context?.id)?.label ||
+    "";
   const contextHeader = (group.context?.text || "").slice(0, 240);
   const files = group.documents.map(fileBase);
   const filesText = files.join(" ");
-  const source = `${navigatorLabel} ${contextHeader} ${filesText}`.trim();
+  const entryText = group.entries.map((entry) => entry.text).join(" ");
+  const source = `${navigatorLabel} ${contextHeader} ${entryText} ${filesText}`.trim();
+  const linkedMaterialIds = new Set(
+    [...source.matchAll(/vseosvita\.ua\/library\/[^\s"'<>]*?-(\d+)\.html/giu)].map(
+      (match) => match[1],
+    ),
+  );
   const sourceTokens = new Set(tokenize(source));
   const headerNormalized = normalize(`${navigatorLabel} ${contextHeader}`);
   const filesNormalized = normalize(filesText);
@@ -360,11 +442,13 @@ for (const group of documentGroups) {
               normalizedPhrase.includes(title))
           );
         }) || "";
+      const exactVseosvitaUrl = linkedMaterialIds.has(String(material.id));
       const score =
         titleCoverage.coverage * 0.48 +
         labelCoverage.coverage * 0.3 +
         titleDice * 0.22;
       const evidenceRank =
+        Number(exactVseosvitaUrl) * 8 +
         Number(fileContain) * 3 +
         Number(exactTitle) * 2 +
         Number(Boolean(uniquePhrase)) * 1.5 +
@@ -374,6 +458,7 @@ for (const group of documentGroups) {
         score,
         evidenceRank,
         titleCoverage,
+        exactVseosvitaUrl,
         exactTitle,
         fileContain,
         uniquePhrase,
@@ -389,6 +474,7 @@ for (const group of documentGroups) {
   const second = ranked[1];
   const selected = ranked.filter(
     (candidate) =>
+      candidate.exactVseosvitaUrl ||
       candidate.fileContain ||
       candidate.exactTitle ||
       candidate.uniquePhrase,
@@ -409,8 +495,10 @@ for (const group of documentGroups) {
     ).values(),
   ];
   for (const candidate of uniqueSelected) {
-    const evidence = candidate.fileContain
-      ? "filename"
+    const evidence = candidate.exactVseosvitaUrl
+      ? "vseosvita-url"
+      : candidate.fileContain
+        ? "filename"
       : candidate.exactTitle
         ? "exact-title"
         : candidate.uniquePhrase
@@ -440,8 +528,10 @@ for (const group of documentGroups) {
       slug: candidate.material.slug,
       title: candidate.material.title,
       score: Number(candidate.score.toFixed(4)),
-      evidence: candidate.fileContain
-        ? "filename"
+      evidence: candidate.exactVseosvitaUrl
+        ? "vseosvita-url"
+        : candidate.fileContain
+          ? "filename"
         : candidate.exactTitle
           ? "exact-title"
           : candidate.uniquePhrase
@@ -473,6 +563,7 @@ for (const match of [...matches]) {
 }
 
 const evidenceWeight = {
+  "vseosvita-url": 6,
   filename: 4,
   "exact-title": 3,
   "unique-phrase": 2,
@@ -515,6 +606,7 @@ const telegramLinks = Object.fromEntries(
 const report = {
   generatedAt: new Date().toISOString(),
   channel: CHANNEL_URL,
+  source: telegramSource,
   channelPosts: posts.length,
   navigatorEntries: navigator.length,
   documentPosts: documentPosts.length,
