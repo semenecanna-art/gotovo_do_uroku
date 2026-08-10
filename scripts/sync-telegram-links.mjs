@@ -219,6 +219,9 @@ const containsWholePhrase = (haystack, needle) =>
 const materials = JSON.parse(
   await fs.readFile(path.join(root, "data", "materials.json"), "utf8"),
 );
+const existingTelegramLinks = JSON.parse(
+  await fs.readFile(path.join(root, "data", "telegram-links.json"), "utf8"),
+);
 const posts = await crawlChannel();
 const navigator = await readNavigator();
 const navigatorByTarget = new Map(
@@ -491,10 +494,21 @@ for (const match of matches) {
   }
 }
 
+const materialSlugs = new Set(materials.map((material) => material.slug));
+const preservedTelegramLinks = Object.fromEntries(
+  Object.entries(existingTelegramLinks).filter(
+    ([slug, telegramUrl]) =>
+      materialSlugs.has(slug) &&
+      /^https:\/\/t\.me\/gotovo_do_uroku\/\d+$/.test(telegramUrl),
+  ),
+);
 const telegramLinks = Object.fromEntries(
-  [...bestBySlug.values()]
-    .sort((left, right) => left.slug.localeCompare(right.slug, "uk"))
-    .map((match) => [match.slug, match.telegramUrl]),
+  Object.entries({
+    ...preservedTelegramLinks,
+    ...Object.fromEntries(
+      [...bestBySlug.values()].map((match) => [match.slug, match.telegramUrl]),
+    ),
+  }).sort(([left], [right]) => left.localeCompare(right, "uk")),
 );
 const report = {
   generatedAt: new Date().toISOString(),

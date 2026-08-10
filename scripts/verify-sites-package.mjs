@@ -4,6 +4,9 @@ import worker from "../server/index.js";
 
 const clientDir = path.resolve("dist/client");
 const materialsDir = path.join(clientDir, "materials");
+const expectedMaterials = JSON.parse(
+  await readFile(path.resolve("data/materials.json"), "utf8"),
+).length;
 const materialEntries = (await readdir(materialsDir, { withFileTypes: true })).filter(
   (entry) => entry.isDirectory(),
 );
@@ -28,8 +31,10 @@ await access(path.resolve("dist/.openai/hosting.json"));
 await access(path.resolve("dist/server/index.js"));
 await access(path.join(clientDir, "rozrizaty-zobrazhennya", "index.html"));
 
-if (materialEntries.length !== 896) {
-  throw new Error(`Expected 896 material directories, received ${materialEntries.length}.`);
+if (materialEntries.length !== expectedMaterials) {
+  throw new Error(
+    `Expected ${expectedMaterials} material directories, received ${materialEntries.length}.`,
+  );
 }
 if (duplicatePayloads !== 0) {
   throw new Error(`Found ${duplicatePayloads} duplicate __next._full.txt payloads.`);

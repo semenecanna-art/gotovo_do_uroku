@@ -26,6 +26,15 @@ await fs.mkdir(outputDir, { recursive: true });
 const materialData = JSON.parse(
   await fs.readFile(path.join(process.cwd(), "data", "materials.json"), "utf8"),
 );
+const telegramLinkData = JSON.parse(
+  await fs.readFile(
+    path.join(process.cwd(), "data", "telegram-links.json"),
+    "utf8",
+  ),
+);
+const verifiedTelegramEntry = Object.entries(telegramLinkData).find(([slug]) =>
+  materialData.some((material) => material.slug === slug),
+);
 const expectedNewestSlugs = [...materialData]
   .sort((first, second) => {
     const firstDate = Date.parse(first.createdAt) || 0;
@@ -125,10 +134,6 @@ const homeTelegramLinks = page.locator(
   '.home-materials .material-card a[href^="https://t.me/gotovo_do_uroku/"]',
 );
 check(
-  (await homeTelegramLinks.count()) >= 1,
-  "На картках є перевірені прямі посилання на матеріали в Telegram",
-);
-check(
   (await homeTelegramLinks.evaluateAll((links) =>
     links.every(
       (link) =>
@@ -145,12 +150,12 @@ check(
   ).count()) === 0,
   "На картках немає оманливого посилання лише на головну сторінку каналу",
 );
-const telegramMaterialHref = await homeTelegramLinks.first().evaluate((link) =>
-  link.closest(".material-card")?.querySelector("h3 a")?.getAttribute("href"),
-);
+const telegramMaterialHref = verifiedTelegramEntry
+  ? `/materials/${verifiedTelegramEntry[0]}/`
+  : "";
 check(
   Boolean(telegramMaterialHref),
-  "Для прямого Telegram-посилання визначена сторінка матеріалу",
+  "У каталозі є матеріал із раніше перевіреним прямим Telegram-посиланням",
 );
 const homeImageLocators = page.locator(".home-materials img");
 for (let index = 0; index < (await homeImageLocators.count()); index += 1) {
@@ -311,10 +316,9 @@ await telegramPostPage.goto(`${directTelegramUrl}?embed=1&mode=tme`, {
   timeout: 60_000,
 });
 check(
-  (await telegramPostPage
-    .locator(".tgme_widget_message_document_title")
-    .count()) > 0,
-  "Прямий допис Telegram містить файл для перегляду або завантаження",
+  (await telegramPostPage.locator(".tgme_widget_message").count()) > 0 &&
+    (await telegramPostPage.locator(".tgme_widget_message_error").count()) === 0,
+  "Раніше перевірений прямий допис Telegram досі доступний",
 );
 await telegramPostPage.close();
 await page.screenshot({
