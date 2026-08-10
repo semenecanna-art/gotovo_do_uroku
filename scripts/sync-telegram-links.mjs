@@ -366,6 +366,10 @@ const extractSeriesSignature = (value) => {
     part:
       normalized.match(/(?:^| )(?:ч|частина)\s*\.?\s*(\d+)(?: |$)/u)?.[1] ||
       "",
+    week:
+      normalized.match(/(?:^| )тиждень\s*(\d+)(?: |$)/u)?.[1] ||
+      normalized.match(/(?:^| )(\d+)\s*тиждень(?: |$)/u)?.[1] ||
+      "",
   };
 };
 
@@ -439,12 +443,18 @@ for (const material of materials) {
       const sourceTokens = new Set(tokenize(post.text));
       const titleCoverage = weightedCoverage(material.title, sourceTokens);
       const sourceSignature = extractSeriesSignature(post.text);
-      const seriesMatches =
-        (!materialSignature.lesson ||
-          sourceSignature.lesson === materialSignature.lesson) &&
-        (!materialSignature.part ||
-          !sourceSignature.part ||
-          sourceSignature.part === materialSignature.part);
+      const signatureFields = ["lesson", "part", "week"];
+      const seriesConflict = signatureFields.some(
+        (field) =>
+          materialSignature[field] &&
+          sourceSignature[field] &&
+          materialSignature[field] !== sourceSignature[field],
+      );
+      const seriesExact = signatureFields.some(
+        (field) =>
+          materialSignature[field] &&
+          sourceSignature[field] === materialSignature[field],
+      );
       const title = normalize(material.title);
       const source = normalize(post.text);
       const exactTitle =
@@ -460,10 +470,12 @@ for (const material of materials) {
         exactTitle,
         rareMatched,
         rareMissing,
-        seriesMatches,
+        seriesConflict,
+        seriesExact,
         titleCoverage,
       };
     })
+    .filter((candidate) => !candidate.seriesConflict)
     .sort(
       (left, right) =>
         right.titleCoverage.coverage - left.titleCoverage.coverage ||
@@ -477,10 +489,27 @@ for (const material of materials) {
   const margin = best.titleCoverage.coverage - secondCoverage;
   const distinctiveMatch =
     best.rareMatched.length >= 3 && best.rareMissing.length === 0;
+  const hoursApart =
+    Math.abs(Date.parse(best.post.datetime) - materialTime) / (60 * 60 * 1000);
   const accepted =
-    best.seriesMatches &&
-    best.titleCoverage.coverage >= 0.78 &&
-    (best.exactTitle || (distinctiveMatch && margin >= 0.08));
+    (best.titleCoverage.coverage >= 0.78 &&
+      (best.exactTitle || (distinctiveMatch && margin >= 0.08))) ||
+    (best.seriesExact &&
+      best.titleCoverage.coverage >= 0.65 &&
+      best.titleCoverage.matched.length >= 4 &&
+      best.rareMatched.length >= 1 &&
+      hoursApart <= 6) ||
+    (hoursApart <= 0.15 &&
+      best.titleCoverage.coverage >= 0.5 &&
+      best.titleCoverage.matched.length >= 5 &&
+      best.rareMatched.length >= 2 &&
+      best.rareMissing.length <= 1) ||
+    (hoursApart <= 3 &&
+      best.titleCoverage.coverage >= 0.82 &&
+      best.titleCoverage.matched.length >= 5 &&
+      best.rareMatched.length >= 2 &&
+      best.rareMissing.length <= 1 &&
+      margin >= 0.15);
   if (!accepted) continue;
 
   matches.push({

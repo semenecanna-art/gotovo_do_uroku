@@ -10,6 +10,7 @@
     "import-materials": "node scripts/import-materials.mjs",
     "sync:telegram": "node scripts/sync-telegram-links.mjs --write",
     "validate": "node scripts/validate-data.mjs",
+    "validate:telegram": "node scripts/verify-telegram-links.mjs",
     "validate:images": "node scripts/verify-images.mjs",
     "optimize:covers": "node scripts/optimize-covers.mjs",
     "test:export": "node scripts/verify-export.mjs",
