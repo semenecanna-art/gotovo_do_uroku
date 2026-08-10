@@ -4,6 +4,10 @@ import path from "node:path";
 import process from "node:process";
 
 const baseUrl = process.env.TEST_BASE_URL ?? "http://127.0.0.1:4175";
+const telegramPostPattern =
+  /^https:\/\/t\.me\/(?:gotovo_do_uroku|gotovo_do_uroku_files)\/\d+$/;
+const telegramPostSelector =
+  'a[href^="https://t.me/gotovo_do_uroku/"], a[href^="https://t.me/gotovo_do_uroku_files/"]';
 const chromePaths = [
   "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
   "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
@@ -32,9 +36,13 @@ const telegramLinkData = JSON.parse(
     "utf8",
   ),
 );
-const verifiedTelegramEntry = Object.entries(telegramLinkData).find(([slug]) =>
+const verifiedTelegramEntries = Object.entries(telegramLinkData).filter(([slug]) =>
   materialData.some((material) => material.slug === slug),
 );
+const verifiedTelegramEntry =
+  verifiedTelegramEntries.find(([, url]) =>
+    String(url).startsWith("https://t.me/gotovo_do_uroku_files/"),
+  ) || verifiedTelegramEntries[0];
 const expectedNewestSlugs = [...materialData]
   .sort((first, second) => {
     const firstDate = Date.parse(first.createdAt) || 0;
@@ -130,14 +138,14 @@ check(
   JSON.stringify(homeMaterialSlugs) === JSON.stringify(expectedNewestSlugs),
   "Розділ «Новинки» автоматично показує 8 найновіших матеріалів за датою",
 );
-const homeTelegramLinks = page.locator(
-  '.home-materials .material-card a[href^="https://t.me/gotovo_do_uroku/"]',
-);
+const homeTelegramLinks = page
+  .locator(".home-materials .material-card")
+  .locator(telegramPostSelector);
 check(
   (await homeTelegramLinks.evaluateAll((links) =>
     links.every(
       (link) =>
-        /^https:\/\/t\.me\/gotovo_do_uroku\/\d+$/.test(link.href) &&
+        telegramPostPattern.test(link.href) &&
         link.getAttribute("target") === "_blank" &&
         link.getAttribute("rel")?.includes("noopener"),
     ),
@@ -293,16 +301,16 @@ check(
   ),
   "В описі матеріалу автоматично виправлені пропущені пробіли",
 );
-const detailTelegramLink = page.locator(
-  '.detail-actions a[href^="https://t.me/gotovo_do_uroku/"]',
-);
+const detailTelegramLink = page
+  .locator(".detail-actions")
+  .locator(telegramPostSelector);
 check(
   (await detailTelegramLink.count()) === 1 &&
     (await detailTelegramLink.isVisible()),
   "На сторінці доступного матеріалу є помітна кнопка Telegram",
 );
 check(
-  /^https:\/\/t\.me\/gotovo_do_uroku\/\d+$/.test(
+  telegramPostPattern.test(
     (await detailTelegramLink.getAttribute("href")) || "",
   ) &&
   (await detailTelegramLink.getAttribute("target")) === "_blank" &&
@@ -393,7 +401,8 @@ check(
 );
 check(
   await page
-    .locator('.detail-actions a[href^="https://t.me/gotovo_do_uroku/"]')
+    .locator(".detail-actions")
+    .locator(telegramPostSelector)
     .isVisible(),
   "Telegram-кнопка зберігається після прямого відкриття сторінки матеріалу",
 );
@@ -474,7 +483,8 @@ await mobilePage.goto(new URL(telegramMaterialHref, baseUrl).href, {
 });
 check(
   await mobilePage
-    .locator('.detail-actions a[href^="https://t.me/gotovo_do_uroku/"]')
+    .locator(".detail-actions")
+    .locator(telegramPostSelector)
     .isVisible(),
   "Telegram-кнопка видима на мобільній сторінці матеріалу",
 );
