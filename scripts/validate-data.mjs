@@ -41,7 +41,7 @@ for (const [slug, telegramUrl] of Object.entries(telegramLinks)) {
     errors.push(`Telegram-посилання має невідомий slug: ${slug}`);
   }
   if (
-    !/^https:\/\/t\.me\/(?:gotovo_do_uroku|gotovo_do_uroku_files)\/\d+$/.test(
+    !/^https:\/\/t\.me\/gotovo_do_uroku\/\d+$/.test(
       telegramUrl,
     )
   ) {

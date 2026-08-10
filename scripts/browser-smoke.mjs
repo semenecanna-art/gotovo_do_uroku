@@ -4,10 +4,8 @@ import path from "node:path";
 import process from "node:process";
 
 const baseUrl = process.env.TEST_BASE_URL ?? "http://127.0.0.1:4175";
-const telegramPostPattern =
-  /^https:\/\/t\.me\/(?:gotovo_do_uroku|gotovo_do_uroku_files)\/\d+$/;
-const telegramPostSelector =
-  'a[href^="https://t.me/gotovo_do_uroku/"], a[href^="https://t.me/gotovo_do_uroku_files/"]';
+const telegramPostPattern = /^https:\/\/t\.me\/gotovo_do_uroku\/\d+$/;
+const telegramPostSelector = 'a[href^="https://t.me/gotovo_do_uroku/"]';
 const chromePaths = [
   "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
   "C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe",
@@ -36,13 +34,9 @@ const telegramLinkData = JSON.parse(
     "utf8",
   ),
 );
-const verifiedTelegramEntries = Object.entries(telegramLinkData).filter(([slug]) =>
+const verifiedTelegramEntry = Object.entries(telegramLinkData).find(([slug]) =>
   materialData.some((material) => material.slug === slug),
 );
-const verifiedTelegramEntry =
-  verifiedTelegramEntries.find(([, url]) =>
-    String(url).startsWith("https://t.me/gotovo_do_uroku_files/"),
-  ) || verifiedTelegramEntries[0];
 const expectedNewestSlugs = [...materialData]
   .sort((first, second) => {
     const firstDate = Date.parse(first.createdAt) || 0;

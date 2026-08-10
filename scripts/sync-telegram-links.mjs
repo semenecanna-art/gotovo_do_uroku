@@ -499,7 +499,7 @@ const preservedTelegramLinks = Object.fromEntries(
   Object.entries(existingTelegramLinks).filter(
     ([slug, telegramUrl]) =>
       materialSlugs.has(slug) &&
-      /^https:\/\/t\.me\/(?:gotovo_do_uroku|gotovo_do_uroku_files)\/\d+$/.test(
+      /^https:\/\/t\.me\/gotovo_do_uroku\/\d+$/.test(
         telegramUrl,
       ),
   ),
