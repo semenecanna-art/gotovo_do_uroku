@@ -37,6 +37,11 @@ const telegramLinkData = JSON.parse(
 const verifiedTelegramEntry = Object.entries(telegramLinkData).find(([slug]) =>
   materialData.some((material) => material.slug === slug),
 );
+const telegramOnlyEntry = materialData.find(
+  (material) =>
+    !material.vseosvitaUrl &&
+    telegramPostPattern.test(telegramLinkData[material.slug] || ""),
+);
 const expectedNewestSlugs = [...materialData]
   .sort((first, second) => {
     const firstDate = Date.parse(first.createdAt) || 0;
@@ -350,6 +355,19 @@ check(
   "Раніше перевірений прямий допис Telegram досі доступний",
 );
 await telegramPostPage.close();
+check(Boolean(telegramOnlyEntry), "У каталозі є окремий матеріал лише з Telegram");
+await page.goto(`${baseUrl}/materials/${telegramOnlyEntry.slug}/`, {
+  waitUntil: "domcontentloaded",
+});
+check(
+  (await page.locator(".detail-actions").locator(telegramPostSelector).count()) === 1,
+  "Telegram-only матеріал має пряму кнопку завантаження",
+);
+check(
+  (await page.locator('.material-detail a[href^="https://vseosvita.ua/"]').count()) === 0 &&
+    (await page.locator('.description-aside-links a[href^="https://vseosvita.ua/"]').count()) === 0,
+  "Для Telegram-only матеріалу не показується порожня кнопка Всеосвіти",
+);
 await page.screenshot({
   path: path.join(outputDir, "material-detail-desktop.png"),
   fullPage: true,

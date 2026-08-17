@@ -181,15 +181,17 @@ export default async function MaterialPage({
               )}
             </dl>
             <div className="detail-actions">
-              <a
-                className="button button-buy"
-                href={material.vseosvitaUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                {material.isFree ? "Відкрити на Всеосвіті" : "Купити на Всеосвіті"}
-                <ArrowUpRight size={20} aria-hidden="true" />
-              </a>
+              {material.vseosvitaUrl && (
+                <a
+                  className="button button-buy"
+                  href={material.vseosvitaUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  {material.isFree ? "Відкрити на Всеосвіті" : "Купити на Всеосвіті"}
+                  <ArrowUpRight size={20} aria-hidden="true" />
+                </a>
+              )}
               {material.telegramUrl && (
                 <a
                   className="button button-telegram"
@@ -204,9 +206,10 @@ export default async function MaterialPage({
               <ShareButton title={material.title} />
             </div>
             <p className="external-note">
-              Оплата й завантаження відбуваються на платформі «Всеосвіта».
+              {material.vseosvitaUrl &&
+                "Оплата й завантаження на Всеосвіті відбуваються за правилами платформи. "}
               {material.telegramUrl &&
-                " Telegram-кнопка відкриває прямий допис із файлом матеріалу."}
+                "Telegram-кнопка відкриває прямий допис із файлом матеріалу."}
             </p>
           </div>
         </article>
@@ -235,15 +238,17 @@ export default async function MaterialPage({
               вказані авторкою на сторінці матеріалу.
             </p>
             <div className="description-aside-links">
-              <a
-                className="text-action"
-                href={material.vseosvitaUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-              >
-                Переглянути на Всеосвіті
-                <ArrowUpRight size={17} aria-hidden="true" />
-              </a>
+              {material.vseosvitaUrl && (
+                <a
+                  className="text-action"
+                  href={material.vseosvitaUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Переглянути на Всеосвіті
+                  <ArrowUpRight size={17} aria-hidden="true" />
+                </a>
+              )}
               {material.telegramUrl && (
                 <a
                   className="text-action card-telegram-action"

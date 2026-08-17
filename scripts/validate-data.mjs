@@ -18,8 +18,15 @@ for (const material of materials) {
   }
   if (slugs.has(material.slug)) errors.push(`Дубльований slug: ${material.slug}`);
   slugs.add(material.slug);
-  if (!/^https:\/\/vseosvita\.ua\/library\//.test(material.vseosvitaUrl)) {
+  if (
+    material.vseosvitaUrl &&
+    !/^https:\/\/vseosvita\.ua\/library\//.test(material.vseosvitaUrl)
+  ) {
     errors.push(`Некоректне посилання Всеосвіти: ${material.slug}`);
+  }
+  const effectiveTelegramUrl = telegramLinks[material.slug] || material.telegramUrl;
+  if (!material.vseosvitaUrl && !effectiveTelegramUrl) {
+    errors.push(`Матеріал не має посилання на джерело: ${material.slug}`);
   }
   if (material.previewStatus === "local") {
     const localPath = path.join(

@@ -298,6 +298,18 @@ async function main() {
   await fs.mkdir(MATERIALS_DIR, { recursive: true });
   await fs.mkdir(SOURCE_DIR, { recursive: true });
 
+  let telegramOnlyMaterials = [];
+  try {
+    const existingMaterials = JSON.parse(await fs.readFile(OUTPUT_FILE, "utf8"));
+    telegramOnlyMaterials = existingMaterials.filter(
+      (material) =>
+        !material.vseosvitaUrl &&
+        String(material.id || "").startsWith("telegram-"),
+    );
+  } catch {
+    // The first import starts without an existing catalog.
+  }
+
   console.log("Перевіряю публічні сторінки бібліотеки…");
   const firstHtml = await fetchText(LIBRARY_URL);
   const first = parseLibraryPage(firstHtml, 1);
@@ -430,11 +442,19 @@ async function main() {
     if (material) material.isFeatured = true;
   });
 
-  await fs.writeFile(OUTPUT_FILE, `${JSON.stringify(materials, null, 2)}\n`);
+  const catalogMaterials = [...materials, ...telegramOnlyMaterials].sort(
+    (left, right) =>
+      (Date.parse(right.createdAt) || 0) - (Date.parse(left.createdAt) || 0),
+  );
+  await fs.writeFile(
+    OUTPUT_FILE,
+    `${JSON.stringify(catalogMaterials, null, 2)}\n`,
+  );
   const report = {
     checkedPages: pageResults.length,
     foundMaterials: cards.length,
-    createdCards: materials.length,
+    createdCards: catalogMaterials.length,
+    preservedTelegramOnly: telegramOnlyMaterials.length,
     localPreviews: materials.filter((item) => item.previewStatus === "local")
       .length,
     remotePreviews: materials.filter((item) => item.previewStatus === "remote")

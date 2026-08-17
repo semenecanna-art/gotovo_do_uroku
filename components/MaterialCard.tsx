@@ -62,16 +62,18 @@ export function MaterialCard({ material }: { material: MaterialSummary }) {
             Переглянути
           </a>
           <div className="material-external-actions">
-            <a
-              className="text-action"
-              href={material.vseosvitaUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label={`${material.isFree ? "Відкрити" : "Купити"} «${material.title}» на Всеосвіті`}
-            >
-              Всеосвіта
-              <ArrowUpRight size={17} aria-hidden="true" />
-            </a>
+            {material.vseosvitaUrl && (
+              <a
+                className="text-action"
+                href={material.vseosvitaUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={`${material.isFree ? "Відкрити" : "Купити"} «${material.title}» на Всеосвіті`}
+              >
+                Всеосвіта
+                <ArrowUpRight size={17} aria-hidden="true" />
+              </a>
+            )}
             {material.telegramUrl && (
               <a
                 className="text-action card-telegram-action"

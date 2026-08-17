@@ -54,7 +54,8 @@ const checkRemote = async (url) => {
 };
 
 let cursor = 0;
-const workers = Array.from({ length: 32 }, async () => {
+// Keep the image hosts from throttling a full-catalog check.
+const workers = Array.from({ length: 12 }, async () => {
   while (cursor < remoteUrls.length) {
     const current = cursor;
     cursor += 1;

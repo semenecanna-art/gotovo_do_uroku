@@ -8,7 +8,7 @@
     "start": "next start",
     "serve:export": "node scripts/serve-static.mjs",
     "import-materials": "node scripts/import-materials.mjs",
-    "sync:telegram": "node scripts/sync-telegram-links.mjs --write",
+    "sync:telegram": "node scripts/sync-telegram-links.mjs --write && node scripts/import-telegram-materials.mjs && node scripts/sync-telegram-links.mjs --write",
     "validate": "node scripts/validate-data.mjs",
     "validate:telegram": "node scripts/verify-telegram-links.mjs",
     "validate:images": "node scripts/verify-images.mjs",

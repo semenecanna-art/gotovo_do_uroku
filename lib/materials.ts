@@ -16,7 +16,7 @@ export const materials = (rawMaterials as Material[]).map((material) => ({
   ...material,
   shortDescription: tidyMaterialText(material.shortDescription),
   fullDescription: tidyMaterialText(material.fullDescription),
-  telegramUrl: directTelegramLinks[material.slug] || "",
+  telegramUrl: directTelegramLinks[material.slug] || material.telegramUrl || "",
 }));
 
 export const materialSummaries: MaterialSummary[] = materials.map(

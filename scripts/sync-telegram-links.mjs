@@ -751,6 +751,15 @@ for (const match of matches) {
 }
 
 const materialSlugs = new Set(materials.map((material) => material.slug));
+const telegramOnlyLinks = Object.fromEntries(
+  materials
+    .filter(
+      (material) =>
+        !material.vseosvitaUrl &&
+        /^https:\/\/t\.me\/gotovo_do_uroku\/\d+$/.test(material.telegramUrl || ""),
+    )
+    .map((material) => [material.slug, material.telegramUrl]),
+);
 const preservedTelegramLinks = Object.fromEntries(
   Object.entries(existingTelegramLinks).filter(
     ([slug, telegramUrl]) =>
@@ -764,8 +773,11 @@ const telegramLinks = Object.fromEntries(
   Object.entries({
     ...preservedTelegramLinks,
     ...Object.fromEntries(
-      [...bestBySlug.values()].map((match) => [match.slug, match.telegramUrl]),
+      [...bestBySlug.values()]
+        .filter((match) => !(match.slug in telegramOnlyLinks))
+        .map((match) => [match.slug, match.telegramUrl]),
     ),
+    ...telegramOnlyLinks,
   }).sort(([left], [right]) => left.localeCompare(right, "uk")),
 );
 const report = {
