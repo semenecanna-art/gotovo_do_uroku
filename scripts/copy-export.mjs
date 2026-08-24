@@ -1,7 +1,7 @@
 import { cp, mkdir, readFile, readdir, rm } from "node:fs/promises";
 import path from "node:path";
 
-await rm("dist", { recursive: true, force: true });
+await rm("dist", { recursive: true, force: true, maxRetries: 8, retryDelay: 250 });
 await mkdir("dist/client", { recursive: true });
 await cp("out", "dist/client", { recursive: true });
 await mkdir("dist/server", { recursive: true });

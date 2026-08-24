@@ -23,6 +23,21 @@ const overrides = new Map([
   [2666, { title: "«Ланцюг обчислень» для 2–3 класу", grade: "2–3 клас", subject: "математика", materialType: "Дидактична гра" }],
   [2682, { title: "Парасолька підтримки «Як ти?»", grade: "1–4 клас", subject: "виховна робота", materialType: "Оформлення класу" }],
   [2694, { title: "Ключі до хорошого навчального року", grade: "1–4 клас", subject: "виховна робота", materialType: "Оформлення класу" }],
+  [2712, { title: "Гра «Полювання на помилки»", grade: "3–4 клас", subject: "українська мова", materialType: "Дидактична гра", description: "Дидактична гра на уважність і повторення української мови. Діти знаходять помилки, пояснюють їх та закріплюють вивчені правила." }],
+  [2719, { title: "«Пульт запуску класу» для 1–3 класів", grade: "1–3 клас", subject: "ранкові зустрічі", materialType: "Рухлива гра", description: "Весела рухлива гра для початку уроку або ранкової зустрічі. Команди на картках допомагають швидко налаштувати клас на спільну роботу." }],
+  [2785, { title: "Оформлення дошки «1–4 КЛАС»", grade: "1–4 клас", subject: "виховна робота", materialType: "Оформлення класу", description: "Яскравий набір написів для святкового оформлення дошки в 1–4 класах. Файли підготовлені для перегляду, друку та завантаження в Telegram." }],
+  [2790, { title: "«Моя долонька» — капсула часу першокласника", grade: "1 клас", subject: "виховна робота", materialType: "Робочий аркуш", description: "Теплий аркуш-спогад для першокласника: дитина обводить долоньку, записує свої мрії та зберігає роботу як маленьку капсулу часу." }],
+  [2810, { title: "Двосторонні шпаргалки на парту", grade: "2–4 клас", subject: "математика, українська мова", materialType: "Пам’ятка", description: "Комплект двосторонніх навчальних шпаргалок на парту з опорами з математики та української мови. Зручно для щоденної роботи й швидкого повторення." }],
+  [2819, { title: "Двосторонні шпаргалки на парту", grade: "2–4 клас", subject: "математика, українська мова", materialType: "Пам’ятка" }],
+  [2828, { title: "Обкладинки-помічники для зошитів. 3–4 клас", grade: "3–4 клас", subject: "українська мова, математика, ЯДС", materialType: "Обкладинки-пам’ятки", description: "Обкладинки для зошитів, які одночасно працюють як короткі навчальні пам’ятки. У комплекті варіанти для української мови, математики та курсу «Я досліджую світ»." }],
+  [2857, { title: "Шпаргалка для вчителя на 2026–2027 навчальний рік", grade: "1–4 клас", subject: "організація роботи вчителя", materialType: "Пам’ятка", description: "Компактна шпаргалка для вчителя на 2026–2027 навчальний рік із корисними підказками для щоденної організації роботи." }],
+  [2865, { title: "«Перші 5 ранків першокласника» — комплект на перший тиждень", grade: "1 клас", subject: "ранкові зустрічі", materialType: "Комплект для першого тижня", description: "Готовий комплект для перших п’яти ранкових зустрічей у 1 класі. Допомагає м’яко познайомити дітей, створити доброзичливу атмосферу й почати шкільний рік без зайвої підготовки." }],
+  [2876, { title: "«Ключ до знань 2026» — святковий ключик першокласника", grade: "1 клас", subject: "виховна робота", materialType: "Подарунок учням", description: "Святковий ключик «Ключ до знань 2026» для вручення першокласникам на початку навчального року. Файл можна переглянути й завантажити в Telegram." }],
+]);
+
+const duplicateSourceIds = new Map([[2819, 2810]]);
+const fixedTelegramLinksByMaterialId = new Map([
+  ["1204762", "https://t.me/gotovo_do_uroku/2836"],
 ]);
 
 const standaloneGroups = [
@@ -45,6 +60,16 @@ const standaloneGroups = [
     materialType: "Оформлення класу",
     description:
       "Готове оформлення на дошку до заняття «Мова гідності» для 3–4 класів. У Telegram доступні файли для друку, перегляду та завантаження.",
+  },
+  {
+    sourceId: 2747,
+    groupPostIds: [2747, 2749],
+    title: "Фотобутафорія «1 клас» до першого дзвоника",
+    grade: "1 клас",
+    subject: "виховна робота",
+    materialType: "Фотобутафорія",
+    description:
+      "Святкова фотобутафорія для першокласників до Першого дзвоника. У Telegram доступні PDF і PNG-файли, які можна переглянути, завантажити та підготувати до друку.",
   },
 ];
 
@@ -207,6 +232,86 @@ const inferSubject = (value) => {
 const materials = JSON.parse(await fs.readFile(materialsFile, "utf8"));
 const telegramLinks = JSON.parse(await fs.readFile(linksFile, "utf8"));
 const report = JSON.parse(await fs.readFile(reportFile, "utf8"));
+
+const curated = [];
+for (const [duplicateSourceId, canonicalSourceId] of duplicateSourceIds) {
+  const duplicateIndex = materials.findIndex(
+    (material) => Number(material.telegramSourcePostId) === duplicateSourceId,
+  );
+  if (duplicateIndex < 0) continue;
+  const duplicate = materials[duplicateIndex];
+  const canonical = materials.find(
+    (material) => Number(material.telegramSourcePostId) === canonicalSourceId,
+  );
+  if (canonical) {
+    canonical.telegramFilePostIds = [...new Set([
+      ...(canonical.telegramFilePostIds || []),
+      ...(duplicate.telegramFilePostIds || []),
+    ])].sort((left, right) => left - right);
+  }
+  delete telegramLinks[duplicate.slug];
+  const duplicateFolder = path.join(root, "public", "materials", duplicate.slug);
+  const archiveFolder = path.join(root, "test-results", "telegram-duplicates", duplicate.slug);
+  try {
+    await fs.mkdir(path.dirname(archiveFolder), { recursive: true });
+    await fs.rename(duplicateFolder, archiveFolder);
+  } catch (error) {
+    if (error?.code !== "ENOENT" && error?.code !== "EEXIST") throw error;
+  }
+  materials.splice(duplicateIndex, 1);
+  curated.push({ action: "merged-duplicate", sourceId: duplicateSourceId, into: canonicalSourceId });
+}
+
+for (const material of materials) {
+  const sourceId = Number(material.telegramSourcePostId);
+  const override = overrides.get(sourceId);
+  if (!override) continue;
+  const desiredSlug = slugify(override.title, sourceId);
+  const needsCuration =
+    material.slug !== desiredSlug ||
+    material.title !== override.title ||
+    material.grade !== override.grade ||
+    material.subject !== override.subject ||
+    material.materialType !== override.materialType ||
+    (override.description && material.fullDescription !== override.description);
+  if (!needsCuration) continue;
+
+  const oldSlug = material.slug;
+  const telegramUrl = telegramLinks[oldSlug] || material.telegramUrl || `${channelUrl}/${sourceId}`;
+  if (oldSlug !== desiredSlug) {
+    const oldFolder = path.join(root, "public", "materials", oldSlug);
+    const newFolder = path.join(root, "public", "materials", desiredSlug);
+    try {
+      await fs.rename(oldFolder, newFolder);
+    } catch (error) {
+      if (error?.code !== "ENOENT" && error?.code !== "EEXIST") throw error;
+    }
+    delete telegramLinks[oldSlug];
+  }
+
+  const cover = await renderCover({ ...override, slug: desiredSlug, sourceId });
+  Object.assign(material, {
+    slug: desiredSlug,
+    title: override.title,
+    shortDescription: shortFrom(override.description || material.fullDescription),
+    fullDescription: override.description || material.fullDescription,
+    category: override.materialType === "Оформлення класу" ? "Оформлення класу" : override.subject,
+    subject: override.subject,
+    grade: override.grade,
+    materialType: override.materialType,
+    coverImage: `/materials/${desiredSlug}/cover.webp`,
+    images: [`/materials/${desiredSlug}/cover.webp`],
+    imageAlt: `Прев’ю матеріалу «${override.title}»`,
+    ogImage: `/materials/${desiredSlug}/cover.webp`,
+    tags: [...new Set([override.grade, override.subject, override.materialType, "Telegram", "безкоштовно"].filter(Boolean))],
+    telegramUrl,
+    imageSource: cover.generated ? "fallback" : "provided",
+    imageSourceUrl: cover.sourceUrl,
+  });
+  telegramLinks[desiredSlug] = telegramUrl;
+  curated.push({ action: "updated", sourceId, title: override.title });
+}
+
 const existingIds = new Set(materials.map((material) => material.id));
 const existingSourceIds = new Set(
   materials
@@ -223,6 +328,7 @@ for (const group of report.groups) {
   if (reservedGroupPosts.has(group.directPostId)) continue;
   const contextId = Number(group.contextPostId);
   if (!Number.isFinite(contextId) || contextId < minimumContextPostId) continue;
+  if (duplicateSourceIds.has(contextId)) continue;
   if (!grouped.has(contextId)) grouped.set(contextId, []);
   grouped.get(contextId).push(group);
 }
@@ -245,6 +351,7 @@ for (const [sourceId, groups] of grouped) {
     grade: override.grade || inferGrade(context),
     subject: override.subject || inferSubject(context),
     materialType: override.materialType || "Дидактичний матеріал",
+    description: override.description,
   });
 }
 
@@ -266,9 +373,9 @@ for (const candidate of candidates.sort((left, right) => left.sourceId - right.s
   const id = `telegram-${candidate.sourceId}`;
   if (existingIds.has(id) || existingSourceIds.has(candidate.sourceId)) continue;
   const slug = slugify(candidate.title, candidate.sourceId);
-  const description = descriptionFrom(
+  const description = candidate.description || descriptionFrom(
     candidate.context,
-    candidate.description || `Матеріал «${candidate.title}» доступний для безкоштовного перегляду та завантаження в Telegram.`,
+    `Матеріал «${candidate.title}» доступний для безкоштовного перегляду та завантаження в Telegram.`,
   );
   const cover = await renderCover({ ...candidate, slug });
   const extensions = [...new Set(candidate.documents.map((file) => path.extname(file).slice(1).toUpperCase()).filter(Boolean))];
@@ -316,6 +423,11 @@ for (const candidate of candidates.sort((left, right) => left.sourceId - right.s
   added.push({ title: candidate.title, telegramUrl });
 }
 
+for (const [materialId, telegramUrl] of fixedTelegramLinksByMaterialId) {
+  const material = materials.find((candidate) => String(candidate.id) === materialId);
+  if (material) telegramLinks[material.slug] = telegramUrl;
+}
+
 materials.sort((left, right) => {
   const dateDifference = (Date.parse(right.createdAt) || 0) - (Date.parse(left.createdAt) || 0);
   return dateDifference || String(right.id).localeCompare(String(left.id), "uk");
@@ -331,8 +443,10 @@ console.log(
     {
       scannedCandidates: candidates.length,
       addedTelegramMaterials: added.length,
+      curatedTelegramMaterials: curated.length,
       totalMaterials: materials.length,
       added,
+      curated,
     },
     null,
     2,

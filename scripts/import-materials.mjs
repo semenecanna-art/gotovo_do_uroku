@@ -13,6 +13,10 @@ const MATERIALS_DIR = path.join(ROOT, "public", "materials");
 const SOURCE_DIR = path.join(ROOT, "source-previews");
 const USER_AGENT =
   "Mozilla/5.0 (compatible; GotovoDoUrokuCatalog/1.0; public metadata importer)";
+const TITLE_OVERRIDES = new Map([
+  ["1202505", "«Міст дружби» — колективна поробка"],
+  ["1201970", "Комплект для оформлення класної дошки та роботи з темою «Мова гідності» у 1–4 класах"],
+]);
 
 const clean = (value = "") => value.replace(/\s+/g, " ").trim();
 const numberFrom = (value = "") =>
@@ -145,7 +149,7 @@ function parseLibraryPage(html, pageIndex) {
       const card = wrapper.children(".lib-item").first();
       const id = clean(wrapper.attr("data-key"));
       const titleLink = card.find(".lib-title a").first();
-      const title = clean(titleLink.text());
+      const title = TITLE_OVERRIDES.get(id) || clean(titleLink.text());
       const vseosvitaUrl = absoluteUrl(titleLink.attr("href"));
       if (!id || !title || !vseosvitaUrl) return;
 

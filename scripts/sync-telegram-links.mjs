@@ -760,6 +760,11 @@ const telegramOnlyLinks = Object.fromEntries(
     )
     .map((material) => [material.slug, material.telegramUrl]),
 );
+const fixedTelegramLinks = Object.fromEntries(
+  materials
+    .filter((material) => String(material.id) === "1204762")
+    .map((material) => [material.slug, "https://t.me/gotovo_do_uroku/2836"]),
+);
 const preservedTelegramLinks = Object.fromEntries(
   Object.entries(existingTelegramLinks).filter(
     ([slug, telegramUrl]) =>
@@ -778,6 +783,7 @@ const telegramLinks = Object.fromEntries(
         .map((match) => [match.slug, match.telegramUrl]),
     ),
     ...telegramOnlyLinks,
+    ...fixedTelegramLinks,
   }).sort(([left], [right]) => left.localeCompare(right, "uk")),
 );
 const report = {
