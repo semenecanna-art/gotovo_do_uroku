@@ -8,6 +8,7 @@ import {
   ImageIcon,
   Lightbulb,
   LockKeyhole,
+  Printer,
   RefreshCw,
   Share2,
   Sparkles,
@@ -25,6 +26,9 @@ import {
 const MAX_FILE_BYTES = 50 * 1024 * 1024;
 const MAX_IMAGE_PIXELS = 100_000_000;
 const MAX_GRID = 12;
+const A4_PORTRAIT = { width: 210, height: 297 };
+const PRINT_MARGIN_MM = 5;
+const MM_TO_PT = 72 / 25.4;
 
 const presets = [
   { columns: 2, rows: 2 },
@@ -49,10 +53,28 @@ type LoadedImage = {
   objectUrl: string;
 };
 
-type OutputFormat = {
-  extension: "jpg" | "png" | "webp";
-  label: "JPG" | "PNG" | "WEBP";
-  mime: "image/jpeg" | "image/png" | "image/webp";
+type ImagePiece = {
+  blob: Blob;
+  filename: string;
+  width: number;
+  height: number;
+};
+
+type PrintPlacement = {
+  pageWidth: number;
+  pageHeight: number;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  dpi: number;
+};
+
+type PrintQuality = {
+  level: "great" | "good" | "fair" | "low";
+  label: string;
+  detail: string;
+  dpi: number;
 };
 
 type ZipFolder = {
@@ -71,9 +93,31 @@ type ZipInstance = {
   ) => Promise<Blob>;
 };
 
+type PdfEmbeddedImage = { width: number; height: number };
+
+type PdfPage = {
+  drawImage: (
+    image: PdfEmbeddedImage,
+    options: { x: number; y: number; width: number; height: number },
+  ) => void;
+};
+
+type PdfDocument = {
+  setTitle: (value: string) => void;
+  setAuthor: (value: string) => void;
+  setSubject: (value: string) => void;
+  setCreator: (value: string) => void;
+  addPage: (size: [number, number]) => PdfPage;
+  embedPng: (data: ArrayBuffer) => Promise<PdfEmbeddedImage>;
+  save: (options: { useObjectStreams: boolean; addDefaultPage: boolean }) => Promise<Uint8Array>;
+};
+
 declare global {
   interface Window {
     JSZip?: new () => ZipInstance;
+    PDFLib?: {
+      PDFDocument: { create: () => Promise<PdfDocument> };
+    };
   }
 }
 
@@ -109,25 +153,78 @@ function pluralParts(number: number) {
   return "частин";
 }
 
-function getOutputFormat(file: File | null): OutputFormat {
-  if (file?.type === "image/jpeg") {
-    return { mime: "image/jpeg", extension: "jpg", label: "JPG" };
+function getPrintPlacement(widthPx: number, heightPx: number): PrintPlacement {
+  const landscape = widthPx >= heightPx;
+  const pageWidth = landscape ? A4_PORTRAIT.height : A4_PORTRAIT.width;
+  const pageHeight = landscape ? A4_PORTRAIT.width : A4_PORTRAIT.height;
+  const safeWidth = pageWidth - PRINT_MARGIN_MM * 2;
+  const safeHeight = pageHeight - PRINT_MARGIN_MM * 2;
+  const sourceRatio = widthPx / heightPx;
+  let width = safeWidth;
+  let height = width / sourceRatio;
+
+  if (height > safeHeight) {
+    height = safeHeight;
+    width = height * sourceRatio;
   }
-  if (file?.type === "image/webp") {
-    return { mime: "image/webp", extension: "webp", label: "WEBP" };
-  }
-  return { mime: "image/png", extension: "png", label: "PNG" };
+
+  const dpi = Math.round(
+    Math.min(widthPx / (width / 25.4), heightPx / (height / 25.4)),
+  );
+
+  return {
+    pageWidth,
+    pageHeight,
+    x: (pageWidth - width) / 2,
+    y: (pageHeight - height) / 2,
+    width,
+    height,
+    dpi,
+  };
 }
 
-function canvasToBlob(canvas: HTMLCanvasElement, mime: OutputFormat["mime"]) {
+function getPrintQuality(widthPx: number, heightPx: number): PrintQuality {
+  const { dpi } = getPrintPlacement(widthPx, heightPx);
+  if (dpi >= 300) {
+    return {
+      level: "great",
+      label: "Відмінна якість",
+      detail: `${dpi} DPI — чіткий друк на A4`,
+      dpi,
+    };
+  }
+  if (dpi >= 220) {
+    return {
+      level: "good",
+      label: "Добра якість",
+      detail: `${dpi} DPI — якісний друк на A4`,
+      dpi,
+    };
+  }
+  if (dpi >= 150) {
+    return {
+      level: "fair",
+      label: "Прийнятна якість",
+      detail: `${dpi} DPI — краще не збільшувати`,
+      dpi,
+    };
+  }
+  return {
+    level: "low",
+    label: "Замала роздільність",
+    detail: `${dpi} DPI — на A4 зображення може бути нечітким`,
+    dpi,
+  };
+}
+
+function canvasToPngBlob(canvas: HTMLCanvasElement) {
   return new Promise<Blob>((resolve, reject) => {
     canvas.toBlob(
       (blob) =>
         blob
           ? resolve(blob)
           : reject(new Error("Не вдалося створити файл зображення.")),
-      mime,
-      mime === "image/jpeg" || mime === "image/webp" ? 0.95 : undefined,
+      "image/png",
     );
   });
 }
@@ -159,7 +256,12 @@ export function ImageSplitter() {
   const [ideaIndex, setIdeaIndex] = useState(0);
 
   const total = columns * rows;
-  const format = getOutputFormat(loaded?.file ?? null);
+  const printQuality = loaded
+    ? getPrintQuality(
+        Math.floor(loaded.element.naturalWidth / columns),
+        Math.floor(loaded.element.naturalHeight / rows),
+      )
+    : null;
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -276,9 +378,9 @@ export function ImageSplitter() {
     setRows(clampGridValue(value));
   }
 
-  async function createPieces() {
+  async function createPieces(): Promise<ImagePiece[]> {
     if (!loaded) return [];
-    const pieces: Array<{ blob: Blob; filename: string }> = [];
+    const pieces: ImagePiece[] = [];
     const sourceWidth = loaded.element.naturalWidth;
     const sourceHeight = loaded.element.naturalHeight;
     let completed = 0;
@@ -294,13 +396,9 @@ export function ImageSplitter() {
         const canvas = document.createElement("canvas");
         canvas.width = pieceWidth;
         canvas.height = pieceHeight;
-        const context = canvas.getContext("2d", { alpha: format.mime !== "image/jpeg" });
+        const context = canvas.getContext("2d", { alpha: true });
         if (!context) throw new Error("Браузер не підтримує обробку цього зображення.");
 
-        if (format.mime === "image/jpeg") {
-          context.fillStyle = "#ffffff";
-          context.fillRect(0, 0, pieceWidth, pieceHeight);
-        }
         context.drawImage(
           loaded.element,
           sourceLeft,
@@ -312,23 +410,60 @@ export function ImageSplitter() {
           pieceWidth,
           pieceHeight,
         );
-        const blob = await canvasToBlob(canvas, format.mime);
+        const blob = await canvasToPngBlob(canvas);
         pieces.push({
           blob,
           filename: `chastyna-r${String(row + 1).padStart(2, "0")}-c${String(
             column + 1,
-          ).padStart(2, "0")}.${format.extension}`,
+          ).padStart(2, "0")}.png`,
+          width: pieceWidth,
+          height: pieceHeight,
         });
         canvas.width = 1;
         canvas.height = 1;
         completed += 1;
-        setProgress(Math.round((completed / total) * 72));
+        setProgress(Math.round((completed / total) * 58));
         if (completed % 3 === 0) {
           await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
         }
       }
     }
     return pieces;
+  }
+
+  async function createPrintPdf(pieces: ImagePiece[]) {
+    if (!window.PDFLib) {
+      throw new Error("PDF-модуль ще завантажується. Спробуй ще раз за кілька секунд.");
+    }
+
+    const pdf = await window.PDFLib.PDFDocument.create();
+    pdf.setTitle("Готово до уроку — частини зображення для друку");
+    pdf.setAuthor("Готово до уроку");
+    pdf.setSubject("A4 PDF для якісного друку");
+    pdf.setCreator("gotovo_do_uroku");
+
+    for (let index = 0; index < pieces.length; index += 1) {
+      const piece = pieces[index];
+      const placement = getPrintPlacement(piece.width, piece.height);
+      const page = pdf.addPage([
+        placement.pageWidth * MM_TO_PT,
+        placement.pageHeight * MM_TO_PT,
+      ]);
+      const image = await pdf.embedPng(await piece.blob.arrayBuffer());
+      page.drawImage(image, {
+        x: placement.x * MM_TO_PT,
+        y: (placement.pageHeight - placement.y - placement.height) * MM_TO_PT,
+        width: placement.width * MM_TO_PT,
+        height: placement.height * MM_TO_PT,
+      });
+      setProgress(58 + Math.round(((index + 1) / pieces.length) * 22));
+      if ((index + 1) % 3 === 0) {
+        await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+      }
+    }
+
+    const bytes = await pdf.save({ useObjectStreams: true, addDefaultPage: false });
+    return new Blob([new Uint8Array(bytes)], { type: "application/pdf" });
   }
 
   async function splitImage() {
@@ -343,19 +478,27 @@ export function ImageSplitter() {
       if (!window.JSZip) {
         throw new Error("ZIP-модуль ще завантажується. Спробуй ще раз за кілька секунд.");
       }
+      setProgressLabel("Створюємо A4 PDF");
+      const pdfBlob = await createPrintPdf(pieces);
       const zip = new window.JSZip();
       const folder = zip.folder(`${baseName}-${columns}x${rows}`);
       if (!folder) throw new Error("Не вдалося створити ZIP-архів.");
       pieces.forEach((piece) => folder.file(piece.filename, piece.blob));
+      folder.file(`${baseName}-${columns}x${rows}-A4-yakisnyi-druk.pdf`, pdfBlob);
       folder.file(
         "prochytai-mene.txt",
         [
-          "Готово до уроку — розрізане зображення",
+          "Готово до уроку — пакет для якісного друку",
           "",
           `Початковий файл: ${loaded.file.name}`,
           `Сітка: ${columns} частин по ширині × ${rows} частин по висоті`,
           `Усього частин: ${pieces.length}`,
           "Порядок: зліва направо, зверху вниз.",
+          `Орієнтовна якість найменшої частини: ${printQuality?.dpi ?? 0} DPI на A4.`,
+          "",
+          "Для найпростішого друку відкрий PDF і друкуй у масштабі 100%.",
+          "PNG збережені без повторного стискання та мають початкову кількість пікселів.",
+          "Сервіс не домальовує відсутні деталі: якість залежить від початкового зображення.",
           "",
           "https://gotovo-do-uroku.com.ua/rozrizaty-zobrazhennya/",
           "gotovo_do_uroku",
@@ -364,11 +507,13 @@ export function ImageSplitter() {
       setProgressLabel("Створюємо ZIP");
       const zipBlob = await zip.generateAsync(
         { type: "blob", compression: "DEFLATE", compressionOptions: { level: 6 } },
-        ({ percent }) => setProgress(72 + Math.round((percent / 100) * 28)),
+        ({ percent }) => setProgress(80 + Math.round((percent / 100) * 20)),
       );
-      downloadBlob(zipBlob, `${baseName}-${columns}x${rows}-gotovo-do-uroku.zip`);
+      downloadBlob(zipBlob, `${baseName}-${columns}x${rows}-druk-gotovo-do-uroku.zip`);
       setProgress(100);
-      showMessage(`Готово! Створено ${pieces.length} ${pluralParts(pieces.length)}.`);
+      showMessage(
+        `Готово! У ZIP є A4 PDF на ${pieces.length} сторінок і ${pieces.length} PNG без втрат.`,
+      );
     } catch (error) {
       console.error(error);
       showMessage(
@@ -554,8 +699,24 @@ export function ImageSplitter() {
                   <span>
                     Розмір частини <strong>{pieceWidth} × {pieceHeight} px</strong>
                   </span>
-                  <span>Формат <strong>{format.label}</strong></span>
+                  <span>Пакет для друку <strong>A4 PDF + PNG</strong></span>
                 </div>
+                {printQuality && (
+                  <div
+                    className={`splitter-print-quality is-${printQuality.level}`}
+                    data-testid="splitter-print-quality"
+                  >
+                    <Printer size={23} aria-hidden="true" />
+                    <div>
+                      <strong>{printQuality.label}</strong>
+                      <span>{printQuality.detail}</span>
+                    </div>
+                  </div>
+                )}
+                <p className="splitter-print-note">
+                  PDF автоматично матиме по одній частині на сторінці A4. PNG
+                  збережуть усі пікселі без повторного стискання.
+                </p>
                 <button
                   className="button button-primary splitter-download"
                   type="button"
@@ -563,7 +724,7 @@ export function ImageSplitter() {
                   disabled={busy}
                 >
                   <Download size={20} aria-hidden="true" />
-                  {busy ? "Готуємо файли…" : "Розрізати й завантажити ZIP"}
+                  {busy ? "Готуємо файли…" : "Створити пакет для якісного друку"}
                 </button>
                 <button
                   className="splitter-change"
@@ -611,7 +772,7 @@ export function ImageSplitter() {
         </article>
         <article>
           <FileArchive aria-hidden="true" />
-          <div><h2>Один ZIP-архів</h2><p>Усі частини мають зрозумілі назви й завантажуються одним файлом.</p></div>
+          <div><h2>Готово до друку</h2><p>У ZIP буде багатосторінковий A4 PDF та окремі PNG без втрати пікселів.</p></div>
         </article>
       </section>
 

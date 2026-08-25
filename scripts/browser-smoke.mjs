@@ -237,9 +237,11 @@ check(
   await page.getByRole("heading", { name: /Розріж зображення/ }).isVisible(),
   "Сторінка інструмента відкривається",
 );
-await page.waitForFunction(() => typeof window.JSZip === "function", null, {
-  timeout: 30_000,
-});
+await page.waitForFunction(
+  () => typeof window.JSZip === "function" && typeof window.PDFLib?.PDFDocument === "function",
+  null,
+  { timeout: 30_000 },
+);
 await page
   .locator('input[data-testid="splitter-file"]')
   .setInputFiles(path.join(process.cwd(), "public", "brand", "logo.png"));
@@ -250,12 +252,20 @@ check(
   (await page.locator(".splitter-grid-badge").innerText()).includes("6 частин"),
   "Сітка 3 × 2 показує 6 частин",
 );
+const printQualityText = await page
+  .locator('[data-testid="splitter-print-quality"]')
+  .innerText();
+check(
+  /\d+ DPI/.test(printQualityText),
+  "Перед завантаженням показано реальну якість друку в DPI",
+);
 const splitterDownload = page.waitForEvent("download", { timeout: 60_000 });
-await page.getByRole("button", { name: "Розрізати й завантажити ZIP" }).click();
+await page.getByRole("button", { name: "Створити пакет для якісного друку" }).click();
 const downloadedArchive = await splitterDownload;
 const archivePath = path.join(outputDir, "splitter-3x2.zip");
 await downloadedArchive.saveAs(archivePath);
-const archiveBinary = (await fs.readFile(archivePath)).toString("latin1");
+const archiveBuffer = await fs.readFile(archivePath);
+const archiveBinary = archiveBuffer.toString("latin1");
 const pieceNames = new Set(
   Array.from(
     archiveBinary.matchAll(/chastyna-r\d{2}-c\d{2}\.png/g),
@@ -263,8 +273,27 @@ const pieceNames = new Set(
   ),
 );
 check(
-  pieceNames.size === 6 && archiveBinary.includes("prochytai-mene.txt"),
-  "ZIP для сітки 3 × 2 містить шість PNG-частин та інструкцію",
+  pieceNames.size === 6 &&
+    archiveBinary.includes("-A4-yakisnyi-druk.pdf") &&
+    archiveBinary.includes("prochytai-mene.txt"),
+  "Пакет для друку містить A4 PDF, шість PNG без втрат та інструкцію",
+);
+const printPackage = await page.evaluate(async (archiveBase64) => {
+  const bytes = Uint8Array.from(atob(archiveBase64), (symbol) => symbol.charCodeAt(0));
+  const zip = await window.JSZip.loadAsync(bytes);
+  const entries = Object.values(zip.files).filter((entry) => !entry.dir);
+  const pdfEntry = entries.find((entry) => entry.name.endsWith("-A4-yakisnyi-druk.pdf"));
+  if (!pdfEntry) return { pdfPages: 0, pngCount: 0 };
+  const pdfBytes = await pdfEntry.async("uint8array");
+  const pdf = await window.PDFLib.PDFDocument.load(pdfBytes);
+  return {
+    pdfPages: pdf.getPageCount(),
+    pngCount: entries.filter((entry) => /chastyna-r\d{2}-c\d{2}\.png$/.test(entry.name)).length,
+  };
+}, archiveBuffer.toString("base64"));
+check(
+  printPackage.pdfPages === 6 && printPackage.pngCount === 6,
+  "A4 PDF має по одній сторінці на кожну частину зображення",
 );
 await page.screenshot({
   path: path.join(outputDir, "image-splitter-desktop.png"),
