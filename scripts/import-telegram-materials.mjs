@@ -36,8 +36,16 @@ const overrides = new Map([
 ]);
 
 const duplicateSourceIds = new Map([[2819, 2810]]);
+const vseosvitaSourceLinks = new Map([
+  [2906, { materialId: "1207563", telegramUrl: "https://t.me/gotovo_do_uroku/2907" }],
+  [2918, { materialId: "1208446", telegramUrl: "https://t.me/gotovo_do_uroku/2919" }],
+]);
 const fixedTelegramLinksByMaterialId = new Map([
   ["1204762", "https://t.me/gotovo_do_uroku/2836"],
+  ["1206676", "https://t.me/gotovo_do_uroku/2880"],
+  ["1207563", "https://t.me/gotovo_do_uroku/2907"],
+  ["1208446", "https://t.me/gotovo_do_uroku/2919"],
+  ["1208497", "https://t.me/gotovo_do_uroku/2956"],
 ]);
 
 const standaloneGroups = [
@@ -234,6 +242,29 @@ const telegramLinks = JSON.parse(await fs.readFile(linksFile, "utf8"));
 const report = JSON.parse(await fs.readFile(reportFile, "utf8"));
 
 const curated = [];
+for (const [sourceId, { materialId, telegramUrl }] of vseosvitaSourceLinks) {
+  const duplicateIndex = materials.findIndex(
+    (material) => Number(material.telegramSourcePostId) === sourceId,
+  );
+  if (duplicateIndex >= 0) {
+    const duplicate = materials[duplicateIndex];
+    delete telegramLinks[duplicate.slug];
+    const duplicateFolder = path.join(root, "public", "materials", duplicate.slug);
+    const archiveFolder = path.join(root, "test-results", "telegram-duplicates", duplicate.slug);
+    try {
+      await fs.mkdir(path.dirname(archiveFolder), { recursive: true });
+      await fs.rename(duplicateFolder, archiveFolder);
+    } catch (error) {
+      if (error?.code !== "ENOENT" && error?.code !== "EEXIST") throw error;
+    }
+    materials.splice(duplicateIndex, 1);
+  }
+
+  const material = materials.find((candidate) => String(candidate.id) === materialId);
+  if (material) telegramLinks[material.slug] = telegramUrl;
+  curated.push({ action: "linked-to-vseosvita", sourceId, materialId, telegramUrl });
+}
+
 for (const [duplicateSourceId, canonicalSourceId] of duplicateSourceIds) {
   const duplicateIndex = materials.findIndex(
     (material) => Number(material.telegramSourcePostId) === duplicateSourceId,
@@ -329,6 +360,7 @@ for (const group of report.groups) {
   const contextId = Number(group.contextPostId);
   if (!Number.isFinite(contextId) || contextId < minimumContextPostId) continue;
   if (duplicateSourceIds.has(contextId)) continue;
+  if (vseosvitaSourceLinks.has(contextId)) continue;
   if (!grouped.has(contextId)) grouped.set(contextId, []);
   grouped.get(contextId).push(group);
 }

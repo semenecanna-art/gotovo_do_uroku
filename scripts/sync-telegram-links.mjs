@@ -760,10 +760,18 @@ const telegramOnlyLinks = Object.fromEntries(
     )
     .map((material) => [material.slug, material.telegramUrl]),
 );
+const fixedTelegramLinksByMaterialId = new Map([
+  ["1204762", "https://t.me/gotovo_do_uroku/2836"],
+  ["1206676", "https://t.me/gotovo_do_uroku/2880"],
+  ["1207563", "https://t.me/gotovo_do_uroku/2907"],
+  ["1208446", "https://t.me/gotovo_do_uroku/2919"],
+  ["1208497", "https://t.me/gotovo_do_uroku/2956"],
+]);
 const fixedTelegramLinks = Object.fromEntries(
-  materials
-    .filter((material) => String(material.id) === "1204762")
-    .map((material) => [material.slug, "https://t.me/gotovo_do_uroku/2836"]),
+  materials.flatMap((material) => {
+    const telegramUrl = fixedTelegramLinksByMaterialId.get(String(material.id));
+    return telegramUrl ? [[material.slug, telegramUrl]] : [];
+  }),
 );
 const preservedTelegramLinks = Object.fromEntries(
   Object.entries(existingTelegramLinks).filter(

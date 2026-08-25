@@ -16,6 +16,10 @@ const USER_AGENT =
 const TITLE_OVERRIDES = new Map([
   ["1202505", "«Міст дружби» — колективна поробка"],
   ["1201970", "Комплект для оформлення класної дошки та роботи з темою «Мова гідності» у 1–4 класах"],
+  ["1208446", "Англійський алфавіт для оформлення класу"],
+]);
+const SLUG_OVERRIDES = new Map([
+  ["1208446", "komplekt-anhliiskyi-alfavit-stvorenyi-dlya-oformlennya-prostoru-nad-doshkoyu-kutoc-1208446"],
 ]);
 
 const clean = (value = "") => value.replace(/\s+/g, " ").trim();
@@ -167,7 +171,7 @@ function parseLibraryPage(html, pageIndex) {
 
       items.push({
         id,
-        slug: slugify(title, id),
+        slug: SLUG_OVERRIDES.get(id) || slugify(title, id),
         title,
         shortDescription: clean(
           card.find(".text-highlights").first().text(),

@@ -16,7 +16,11 @@ export const materials = (rawMaterials as Material[]).map((material) => ({
   ...material,
   shortDescription: tidyMaterialText(material.shortDescription),
   fullDescription: tidyMaterialText(material.fullDescription),
-  telegramUrl: directTelegramLinks[material.slug] || material.telegramUrl || "",
+  telegramUrl:
+    directTelegramLinks[material.slug] ||
+    (/^https:\/\/t\.me\/gotovo_do_uroku\/\d+$/.test(material.telegramUrl || "")
+      ? material.telegramUrl
+      : ""),
 }));
 
 export const materialSummaries: MaterialSummary[] = materials.map(
