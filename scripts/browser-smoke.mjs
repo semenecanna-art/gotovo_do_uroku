@@ -529,6 +529,38 @@ check(
   await mobilePage.locator(".mobile-menu").isVisible(),
   "Мобільне меню відкривається",
 );
+const mobileMenuGeometry = await mobilePage
+  .locator(".mobile-menu")
+  .evaluate((menu) => {
+    const rect = menu.getBoundingClientRect();
+    return {
+      height: rect.height,
+      viewportHeight: window.innerHeight,
+      navigationLinks: menu.querySelectorAll("a").length,
+      bodyOverflow: getComputedStyle(document.body).overflow,
+    };
+  });
+check(
+  mobileMenuGeometry.height >= mobileMenuGeometry.viewportHeight - 90,
+  "Мобільне меню займає всю доступну висоту екрана",
+);
+check(
+  mobileMenuGeometry.navigationLinks === 8,
+  "У мобільному меню доступні всі сім розділів і кнопка Telegram",
+);
+check(
+  mobileMenuGeometry.bodyOverflow === "hidden",
+  "Під відкритим мобільним меню сторінка не прокручується",
+);
+await mobilePage
+  .locator('.mobile-menu a[href="https://t.me/gotovo_do_uroku"]')
+  .scrollIntoViewIfNeeded();
+check(
+  await mobilePage
+    .locator('.mobile-menu a[href="https://t.me/gotovo_do_uroku"]')
+    .isVisible(),
+  "До останнього пункту мобільного меню можна дістатися прокручуванням",
+);
 await mobilePage.screenshot({
   path: path.join(outputDir, "menu-mobile.png"),
   fullPage: false,

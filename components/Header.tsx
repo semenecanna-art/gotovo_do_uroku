@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { Menu, Send, X } from "lucide-react";
+import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
 import { TELEGRAM_URL } from "@/lib/site";
 
@@ -22,11 +23,60 @@ export function Header() {
 
   useEffect(() => setOpen(false), [pathname]);
   useEffect(() => {
-    document.body.style.overflow = open ? "hidden" : "";
+    if (!open) return;
+
+    const previousOverflow = document.body.style.overflow;
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setOpen(false);
+    };
+
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", closeOnEscape);
+
     return () => {
-      document.body.style.overflow = "";
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
     };
   }, [open]);
+
+  const mobileMenu = open ? (
+    <div className="mobile-menu-layer">
+      <button
+        className="mobile-menu-backdrop"
+        aria-label="Закрити меню"
+        onClick={() => setOpen(false)}
+      />
+      <nav className="mobile-menu" aria-label="Мобільна навігація">
+        <div className="mobile-brand">
+          <Image
+            src="/brand/logo.png"
+            width={84}
+            height={84}
+            alt="Логотип «Готово до уроку»"
+          />
+          <strong>Готово до уроку</strong>
+        </div>
+        {navigation.map((item) => (
+          <a
+            key={item.href}
+            href={item.href}
+            className={pathname === item.href ? "active" : ""}
+          >
+            {item.label}
+          </a>
+        ))}
+        <a
+          className="button button-telegram"
+          href={TELEGRAM_URL}
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          <Send size={19} aria-hidden="true" />
+          Перейти в Telegram
+        </a>
+      </nav>
+    </div>
+  ) : null;
 
   return (
     <header className="site-header">
@@ -78,44 +128,9 @@ export function Header() {
         </button>
       </div>
 
-      {open && (
-        <div className="mobile-menu-layer">
-          <button
-            className="mobile-menu-backdrop"
-            aria-label="Закрити меню"
-            onClick={() => setOpen(false)}
-          />
-          <nav className="mobile-menu" aria-label="Мобільна навігація">
-            <div className="mobile-brand">
-              <Image
-                src="/brand/logo.png"
-                width={84}
-                height={84}
-                alt="Логотип «Готово до уроку»"
-              />
-              <strong>Готово до уроку</strong>
-            </div>
-            {navigation.map((item) => (
-              <a
-                key={item.href}
-                href={item.href}
-                className={pathname === item.href ? "active" : ""}
-              >
-                {item.label}
-              </a>
-            ))}
-            <a
-              className="button button-telegram"
-              href={TELEGRAM_URL}
-              target="_blank"
-              rel="noopener noreferrer"
-            >
-              <Send size={19} aria-hidden="true" />
-              Перейти в Telegram
-            </a>
-          </nav>
-        </div>
-      )}
+      {typeof document !== "undefined" && mobileMenu
+        ? createPortal(mobileMenu, document.body)
+        : null}
     </header>
   );
 }
