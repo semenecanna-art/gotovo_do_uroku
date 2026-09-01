@@ -38,12 +38,18 @@ const overrides = new Map([
   [3148, { title: "Математичні слова-помічники — 2 клас", grade: "2 клас", subject: "математика", materialType: "Наочність" }],
 ]);
 
-const duplicateSourceIds = new Map([[2819, 2810]]);
+const duplicateSourceIds = new Map([
+  [2819, 2810],
+  // The later post contains a corrected two-sided PDF for the existing
+  // "Ключ до знань 2026" material, not a separate catalog item.
+  [3176, 2876],
+]);
 const vseosvitaSourceLinks = new Map([
   [2906, { materialId: "1207563", telegramUrl: "https://t.me/gotovo_do_uroku/2907" }],
   [2918, { materialId: "1208446", telegramUrl: "https://t.me/gotovo_do_uroku/2919" }],
 ]);
 const fixedTelegramLinksByMaterialId = new Map([
+  ["telegram-2876", "https://t.me/gotovo_do_uroku/3177"],
   ["1204762", "https://t.me/gotovo_do_uroku/2836"],
   ["1206676", "https://t.me/gotovo_do_uroku/2880"],
   ["1207563", "https://t.me/gotovo_do_uroku/2907"],
@@ -461,6 +467,40 @@ for (const candidate of candidates.sort((left, right) => left.sourceId - right.s
 for (const [materialId, telegramUrl] of fixedTelegramLinksByMaterialId) {
   const material = materials.find((candidate) => String(candidate.id) === materialId);
   if (material) telegramLinks[material.slug] = telegramUrl;
+}
+
+// A transferred project may contain catalog data without every generated
+// Telegram cover. Restore those covers before validation or deployment.
+for (const material of materials) {
+  const sourceId = Number(material.telegramSourcePostId);
+  if (!Number.isFinite(sourceId) || material.vseosvitaUrl) continue;
+
+  const expectedCover = path.join(root, "public", "materials", material.slug, "cover.webp");
+  try {
+    await fs.access(expectedCover);
+    continue;
+  } catch (error) {
+    if (error?.code !== "ENOENT") throw error;
+  }
+
+  const cover = await renderCover({
+    slug: material.slug,
+    title: material.title,
+    grade: material.grade,
+    subject: material.subject,
+    sourceId,
+  });
+  const publicCover = `/materials/${material.slug}/cover.webp`;
+  Object.assign(material, {
+    coverImage: publicCover,
+    images: [publicCover],
+    imageAlt: `Прев’ю матеріалу «${material.title}»`,
+    ogImage: publicCover,
+    imageSource: cover.generated ? "fallback" : "provided",
+    imageSourceUrl: cover.sourceUrl,
+    previewStatus: "local",
+  });
+  curated.push({ action: "restored-cover", sourceId, title: material.title });
 }
 
 materials.sort((left, right) => {
