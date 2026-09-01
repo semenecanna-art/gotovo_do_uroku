@@ -1,0 +1,11 @@
+node_modules
+.next
+.next-stale-*
+out
+dist
+.netlify
+.env*
+!.env.example
+source-previews
+npm-debug.log*
+test-results
