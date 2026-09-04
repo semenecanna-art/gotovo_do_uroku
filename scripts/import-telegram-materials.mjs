@@ -47,6 +47,7 @@ const duplicateSourceIds = new Map([
 const vseosvitaSourceLinks = new Map([
   [2906, { materialId: "1207563", telegramUrl: "https://t.me/gotovo_do_uroku/2907" }],
   [2918, { materialId: "1208446", telegramUrl: "https://t.me/gotovo_do_uroku/2919" }],
+  [3179, { materialId: "1215695", telegramUrl: "https://t.me/gotovo_do_uroku/3180" }],
 ]);
 const fixedTelegramLinksByMaterialId = new Map([
   ["telegram-2876", "https://t.me/gotovo_do_uroku/3177"],
@@ -55,6 +56,7 @@ const fixedTelegramLinksByMaterialId = new Map([
   ["1207563", "https://t.me/gotovo_do_uroku/2907"],
   ["1208446", "https://t.me/gotovo_do_uroku/2919"],
   ["1208497", "https://t.me/gotovo_do_uroku/2956"],
+  ["1215695", "https://t.me/gotovo_do_uroku/3180"],
 ]);
 
 const standaloneGroups = [
