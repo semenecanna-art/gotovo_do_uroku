@@ -42,3 +42,31 @@ async function removeDuplicateFullPayloads(directory) {
 
 const removedPayloads = await removeDuplicateFullPayloads("dist/client");
 console.log(`Removed ${removedPayloads} duplicate Next.js payloads.`);
+
+async function removeMaterialRoutePayloads(directory) {
+  let removed = 0;
+  const entries = await readdir(directory, { withFileTypes: true });
+
+  for (const entry of entries) {
+    const entryPath = path.join(directory, entry.name);
+    if (entry.isDirectory()) {
+      removed += await removeMaterialRoutePayloads(entryPath);
+    } else if (
+      entry.isFile() &&
+      entry.name.endsWith(".txt") &&
+      entry.name !== "index.txt"
+    ) {
+      await rm(entryPath);
+      removed += 1;
+    }
+  }
+
+  return removed;
+}
+
+const removedMaterialPayloads = await removeMaterialRoutePayloads(
+  "dist/client/materials",
+);
+console.log(
+  `Removed ${removedMaterialPayloads} unused material route payloads.`,
+);
