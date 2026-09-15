@@ -307,8 +307,9 @@ async function main() {
   await fs.mkdir(SOURCE_DIR, { recursive: true });
 
   let telegramOnlyMaterials = [];
+  let existingMaterials = [];
   try {
-    const existingMaterials = JSON.parse(await fs.readFile(OUTPUT_FILE, "utf8"));
+    existingMaterials = JSON.parse(await fs.readFile(OUTPUT_FILE, "utf8"));
     telegramOnlyMaterials = existingMaterials.filter(
       (material) =>
         !material.vseosvitaUrl &&
@@ -334,7 +335,8 @@ async function main() {
   for (const { items } of pageResults) {
     for (const item of items) unique.set(item.id, item);
   }
-  const cards = Array.from(unique.values());
+  const existingById = new Map(existingMaterials.map(item => [item.id, item]));
+  const cards = Array.from(unique.values()).map(item => ({ ...item, slug: existingById.get(item.id)?.slug || item.slug }));
   console.log(`Знайдено унікальних матеріалів: ${cards.length}`);
 
   const failedUrls = [];
@@ -366,6 +368,8 @@ async function main() {
   });
 
   const materials = await inBatches(withDetails, 5, async (item, index) => {
+    const previous = existingById.get(item.id);
+    if (previous && failedUrls.some(failure => failure.url === item.vseosvitaUrl)) return { ...previous, needsReview: true };
     const sourceImage = item.ogImage || item.previewUrl;
     let cover = { coverImage: "", status: "fallback" };
     try {
@@ -419,7 +423,7 @@ async function main() {
       isNew: item.sourcePage === 1,
       isPopular: false,
       vseosvitaUrl: item.vseosvitaUrl,
-      telegramUrl: TELEGRAM_URL,
+      telegramUrl: previous?.telegramUrl || TELEGRAM_URL,
       createdAt: item.createdAt,
       price: item.price,
       views: item.views,
@@ -450,7 +454,8 @@ async function main() {
     if (material) material.isFeatured = true;
   });
 
-  const catalogMaterials = [...materials, ...telegramOnlyMaterials].sort(
+  const preserved = existingMaterials.filter(item => !unique.has(item.id));
+  const catalogMaterials = [...materials, ...preserved].sort(
     (left, right) =>
       (Date.parse(right.createdAt) || 0) - (Date.parse(left.createdAt) || 0),
   );

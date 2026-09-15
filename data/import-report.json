@@ -1,13 +1,13 @@
 {
   "checkedPages": 20,
-  "foundMaterials": 986,
-  "createdCards": 1025,
-  "preservedTelegramOnly": 39,
-  "localPreviews": 986,
+  "foundMaterials": 995,
+  "createdCards": 1035,
+  "preservedTelegramOnly": 40,
+  "localPreviews": 995,
   "remotePreviews": 0,
   "fallbackPreviews": 0,
-  "detailsWithGallery": 973,
-  "needsReview": 212,
+  "detailsWithGallery": 982,
+  "needsReview": 221,
   "failedUrls": [],
-  "generatedAt": "2026-09-10T12:03:20.621Z"
+  "generatedAt": "2026-09-14T13:53:13.638Z"
 }
