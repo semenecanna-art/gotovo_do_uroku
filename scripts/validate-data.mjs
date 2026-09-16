@@ -24,7 +24,15 @@ for (const material of materials) {
   ) {
     errors.push(`Некоректне посилання Всеосвіти: ${material.slug}`);
   }
-  const effectiveTelegramUrl = telegramLinks[material.slug] || material.telegramUrl;
+  const directTelegramUrl = /^https:\/\/t\.me\/gotovo_do_uroku\/\d+$/.test(
+    material.telegramUrl || "",
+  )
+    ? material.telegramUrl
+    : "";
+  if (material.telegramUrl && !directTelegramUrl) {
+    errors.push(`Некоректне пряме Telegram-посилання: ${material.slug}`);
+  }
+  const effectiveTelegramUrl = telegramLinks[material.slug] || directTelegramUrl;
   if (!material.vseosvitaUrl && !effectiveTelegramUrl) {
     errors.push(`Матеріал не має посилання на джерело: ${material.slug}`);
   }

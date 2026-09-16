@@ -6,7 +6,6 @@ import sharp from "sharp";
 
 const ROOT = process.cwd();
 const LIBRARY_URL = "https://vseosvita.ua/user/id9131/library";
-const TELEGRAM_URL = "https://t.me/gotovo_do_uroku";
 const OUTPUT_FILE = path.join(ROOT, "data", "materials.json");
 const REPORT_FILE = path.join(ROOT, "data", "import-report.json");
 const MATERIALS_DIR = path.join(ROOT, "public", "materials");
@@ -370,6 +369,12 @@ async function main() {
   const materials = await inBatches(withDetails, 5, async (item, index) => {
     const previous = existingById.get(item.id);
     if (previous && failedUrls.some(failure => failure.url === item.vseosvitaUrl)) return { ...previous, needsReview: true };
+    const previousTelegramUrl =
+      /^https:\/\/t\.me\/gotovo_do_uroku\/\d+$/.test(
+        previous?.telegramUrl || "",
+      )
+        ? previous.telegramUrl
+        : "";
     const sourceImage = item.ogImage || item.previewUrl;
     let cover = { coverImage: "", status: "fallback" };
     try {
@@ -423,7 +428,7 @@ async function main() {
       isNew: item.sourcePage === 1,
       isPopular: false,
       vseosvitaUrl: item.vseosvitaUrl,
-      telegramUrl: previous?.telegramUrl || TELEGRAM_URL,
+      telegramUrl: previousTelegramUrl,
       createdAt: item.createdAt,
       price: item.price,
       views: item.views,
