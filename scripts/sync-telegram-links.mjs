@@ -777,6 +777,8 @@ const fixedTelegramLinksByMaterialId = new Map([
   ["1239061", "https://t.me/gotovo_do_uroku/3683"],
   ["1240717", "https://t.me/gotovo_do_uroku/3738"],
   ["1244957", "https://t.me/gotovo_do_uroku/3770"],
+  ["1245777", "https://t.me/gotovo_do_uroku/3781"],
+  ["1246452", "https://t.me/gotovo_do_uroku/3785"],
 ]);
 const fixedTelegramLinks = Object.fromEntries(
   materials.flatMap((material) => {
