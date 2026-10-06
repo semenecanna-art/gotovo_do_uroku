@@ -59,6 +59,7 @@ const vseosvitaSourceLinks = new Map([
   [3769, { materialId: "1244957", telegramUrl: "https://t.me/gotovo_do_uroku/3770" }],
   [3780, { materialId: "1245777", telegramUrl: "https://t.me/gotovo_do_uroku/3781" }],
   [3784, { materialId: "1246452", telegramUrl: "https://t.me/gotovo_do_uroku/3785" }],
+  [3797, { materialId: "1248071", telegramUrl: "https://t.me/gotovo_do_uroku/3798" }],
 ]);
 const fixedTelegramLinksByMaterialId = new Map([
   ["telegram-2876", "https://t.me/gotovo_do_uroku/3177"],
@@ -80,6 +81,7 @@ const fixedTelegramLinksByMaterialId = new Map([
   ["1244957", "https://t.me/gotovo_do_uroku/3770"],
   ["1245777", "https://t.me/gotovo_do_uroku/3781"],
   ["1246452", "https://t.me/gotovo_do_uroku/3785"],
+  ["1248071", "https://t.me/gotovo_do_uroku/3798"],
 ]);
 
 const standaloneGroups = [
