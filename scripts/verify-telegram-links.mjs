@@ -17,7 +17,58 @@ const telegramOnlyUrls = new Set(
 const bad = [];
 let index = 0;
 
+const findTelegramExport = async () => {
+  if (process.env.TELEGRAM_EXPORT_PATH) {
+    return path.resolve(process.env.TELEGRAM_EXPORT_PATH);
+  }
+  const exportsRoot = path.join(
+    process.env.USERPROFILE || "",
+    "Downloads",
+    "Telegram Desktop",
+  );
+  let entries = [];
+  try {
+    entries = await fs.readdir(exportsRoot, { withFileTypes: true });
+  } catch {
+    return "";
+  }
+  const candidates = [];
+  for (const entry of entries) {
+    if (!entry.isDirectory() || !entry.name.startsWith("ChatExport_")) continue;
+    const file = path.join(exportsRoot, entry.name, "result.json");
+    try {
+      candidates.push({ file, modified: (await fs.stat(file)).mtimeMs });
+    } catch {
+      // Ignore incomplete export folders.
+    }
+  }
+  return candidates.sort((left, right) => right.modified - left.modified)[0]?.file || "";
+};
+
+const exportPath = await findTelegramExport();
+let exportedPostIds = null;
+if (exportPath) {
+  const exported = JSON.parse(await fs.readFile(exportPath, "utf8"));
+  if (
+    exported.type === "public_channel" &&
+    Array.isArray(exported.messages)
+  ) {
+    exportedPostIds = new Set(
+      exported.messages
+        .filter((message) => message.type === "message" && Number.isFinite(message.id))
+        .map((message) => message.id),
+    );
+  }
+}
+
 const verify = async (url) => {
+  const match = url.match(/^https:\/\/t\.me\/gotovo_do_uroku\/(\d+)$/);
+  if (exportedPostIds && match) {
+    const postId = Number(match[1]);
+    if (exportedPostIds.has(postId)) return;
+    bad.push({ url, error: `Допис ${postId} відсутній в експорті каналу` });
+    return;
+  }
   let lastError = "";
   for (let attempt = 1; attempt <= 3; attempt += 1) {
     try {
@@ -64,6 +115,7 @@ console.log(
     {
       materials: Object.keys(links).length,
       uniqueTelegramPosts: urls.length,
+      source: exportedPostIds ? exportPath : "public Telegram embeds",
       unavailable: bad,
     },
     null,

@@ -798,12 +798,14 @@ const preservedTelegramLinks = Object.fromEntries(
 );
 const telegramLinks = Object.fromEntries(
   Object.entries({
-    ...preservedTelegramLinks,
     ...Object.fromEntries(
       [...bestBySlug.values()]
         .filter((match) => !(match.slug in telegramOnlyLinks))
         .map((match) => [match.slug, match.telegramUrl]),
     ),
+    // Existing direct links have already been reviewed and published. Keep
+    // them stable; automatic matching may only fill a previously empty link.
+    ...preservedTelegramLinks,
     ...telegramOnlyLinks,
     ...fixedTelegramLinks,
   }).sort(([left], [right]) => left.localeCompare(right, "uk")),
