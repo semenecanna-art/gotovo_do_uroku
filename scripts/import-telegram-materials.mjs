@@ -43,6 +43,19 @@ const duplicateSourceIds = new Map([
   // The later post contains a corrected two-sided PDF for the existing
   // "Ключ до знань 2026" material, not a separate catalog item.
   [3176, 2876],
+  // Revised lesson files belong to the existing "Лисичка і Журавель" card.
+  [3986, 3917],
+]);
+const revisedTelegramSources = new Map([
+  [3986, {
+    canonicalSourceId: 3917,
+    telegramUrl: "https://t.me/gotovo_do_uroku/3986",
+    filePostIds: [3986, 3987],
+    title: "«Лисичка і Журавель»",
+    grade: "2 клас",
+    subject: "читання",
+    materialType: "Конспект уроку",
+  }],
 ]);
 const vseosvitaSourceLinks = new Map([
   [2906, { materialId: "1207563", telegramUrl: "https://t.me/gotovo_do_uroku/2907" }],
@@ -76,6 +89,7 @@ const vseosvitaSourceLinks = new Map([
 ]);
 const fixedTelegramLinksByMaterialId = new Map([
   ["telegram-2876", "https://t.me/gotovo_do_uroku/3177"],
+  ["telegram-3917", "https://t.me/gotovo_do_uroku/3986"],
   ["1204762", "https://t.me/gotovo_do_uroku/2836"],
   ["1206676", "https://t.me/gotovo_do_uroku/2880"],
   ["1207563", "https://t.me/gotovo_do_uroku/2907"],
@@ -353,6 +367,50 @@ for (const [duplicateSourceId, canonicalSourceId] of duplicateSourceIds) {
   }
   materials.splice(duplicateIndex, 1);
   curated.push({ action: "merged-duplicate", sourceId: duplicateSourceId, into: canonicalSourceId });
+}
+
+for (const [revisionSourceId, revision] of revisedTelegramSources) {
+  const material = materials.find(
+    (candidate) =>
+      Number(candidate.telegramSourcePostId) === revision.canonicalSourceId,
+  );
+  if (!material) continue;
+
+  const sourceGroups = report.groups.filter(
+    (group) => Number(group.contextPostId) === revisionSourceId,
+  );
+  const context = clean(sourceGroups[0]?.context || "");
+  const description = descriptionFrom(context, material.fullDescription);
+  Object.assign(material, {
+    title: revision.title,
+    shortDescription: shortFrom(description),
+    fullDescription: description,
+    category: "Читання",
+    subject: revision.subject,
+    grade: revision.grade,
+    materialType: revision.materialType,
+    fileFormat: "DOCX",
+    telegramUrl: revision.telegramUrl,
+    tags: [
+      revision.grade,
+      revision.subject,
+      revision.materialType,
+      "Telegram",
+      "безкоштовно",
+    ],
+    needsReview: false,
+    telegramFilePostIds: [...new Set([
+      ...(material.telegramFilePostIds || []),
+      ...revision.filePostIds,
+    ])].sort((left, right) => left - right),
+  });
+  telegramLinks[material.slug] = revision.telegramUrl;
+  curated.push({
+    action: "updated-revision",
+    sourceId: revisionSourceId,
+    into: revision.canonicalSourceId,
+    title: revision.title,
+  });
 }
 
 for (const material of materials) {

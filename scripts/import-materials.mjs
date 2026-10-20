@@ -32,6 +32,16 @@ const absoluteUrl = (value = "") => {
   }
 };
 
+const canonicalVseosvitaImageUrl = (value = "") => {
+  const text = String(value || "");
+  return /^https:\/\/(?:fs\d+|cert)\.vseosvita\.ua\//i.test(text)
+    ? text.replace(/\?.*$/, "")
+    : text;
+};
+const sameVseosvitaImages = (left = [], right = []) =>
+  JSON.stringify(left.map(canonicalVseosvitaImageUrl)) ===
+  JSON.stringify(right.map(canonicalVseosvitaImageUrl));
+
 const slugify = (title, id) => {
   const translit = new Map(
     Object.entries({
@@ -393,6 +403,21 @@ async function main() {
       console.log(`Підготовлено прев’ю: ${index + 1}/${withDetails.length}`);
     }
 
+    const incomingImages = [
+      cover.coverImage,
+      ...item.gallery.filter((url) => url !== sourceImage),
+    ].filter(Boolean);
+    const stableImages =
+      previous && sameVseosvitaImages(previous.images, incomingImages)
+        ? previous.images
+        : incomingImages;
+    const stableImageSourceUrl =
+      previous &&
+      canonicalVseosvitaImageUrl(previous.imageSourceUrl) ===
+        canonicalVseosvitaImageUrl(sourceImage)
+        ? previous.imageSourceUrl
+        : sourceImage;
+
     const material = {
       id: item.id,
       slug: item.slug,
@@ -412,10 +437,7 @@ async function main() {
       fileFormat: item.fileFormat,
       pagesCount: item.pagesCount,
       coverImage: cover.coverImage,
-      images: [
-        cover.coverImage,
-        ...item.gallery.filter((url) => url !== sourceImage),
-      ].filter(Boolean),
+      images: stableImages,
       imageAlt: `Прев’ю матеріалу «${item.title}»`,
       imageAspectRatio:
         item.ogWidth && item.ogHeight
@@ -431,10 +453,12 @@ async function main() {
       telegramUrl: previousTelegramUrl,
       createdAt: item.createdAt,
       price: item.price,
-      views: item.views,
-      downloads: item.downloads,
+      // These public counters change when the importer visits a material.
+      // Keep the catalog stable unless the card itself is genuinely new.
+      views: previous?.views ?? item.views,
+      downloads: previous?.downloads ?? item.downloads,
       imageSource: "vseosvita",
-      imageSourceUrl: sourceImage,
+      imageSourceUrl: stableImageSourceUrl,
       previewStatus: cover.status,
       needsReview:
         !item.subject ||
